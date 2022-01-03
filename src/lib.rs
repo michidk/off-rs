@@ -1,4 +1,5 @@
 pub mod document;
+pub mod geometry;
 pub(crate) mod parser;
 
 #[cfg(test)]

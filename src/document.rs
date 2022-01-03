@@ -4,7 +4,8 @@ use std::path::Path;
 use std::str::FromStr;
 use thiserror::Error;
 
-use crate::parser::{ParserError, DocumentParser};
+use crate::geometry::{Face, Vertex};
+use crate::parser::{DocumentParser, ParserError};
 
 #[derive(Error, Debug)]
 pub enum DocumentError {
@@ -20,7 +21,8 @@ pub struct OffDocument {
     pub vertex_count: u32,
     pub face_count: u32,
     pub edge_count: u32,
-    pub vertices: Vec<Vertex>
+    pub vertices: Vec<Vertex>,
+    pub faces: Vec<Face>,
 }
 
 impl OffDocument {
@@ -30,6 +32,7 @@ impl OffDocument {
             face_count: 0,
             edge_count: 0,
             vertices: Vec::new(),
+            faces: Vec::new(),
         }
     }
 
@@ -53,7 +56,6 @@ impl OffDocument {
     fn parse(string: &str) -> DocumentResult {
         DocumentParser::parse(string)
     }
-
 }
 
 impl FromStr for OffDocument {
@@ -67,41 +69,5 @@ impl FromStr for OffDocument {
 impl Default for OffDocument {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-pub struct Vertex {
-    pub x: i32,
-    pub y: i32,
-    pub z: i32
-}
-
-impl Vertex {
-    pub fn new(x: i32, y: i32, z: i32) -> Self {
-        Vertex {
-            x,
-            y,
-            z
-        }
-    }
-}
-
-impl TryFrom<Vec<i32>> for Vertex {
-    type Error;
-
-    fn try_from(value: Vec<i32>) -> Result<Self, Self::Error> {
-        Self::new(vec[0], vec[1], vec[2])
-    }
-}
-
-impl From<Vertex> for Vec<i32> {
-    fn from(value: Vertex) -> Vec<i32> {
-        vec![value.x, value.y, value.z]
-    }
-}
-
-impl Default for Vertex {
-    fn default() -> Self {
-        Self::new(0, 0,0)
     }
 }

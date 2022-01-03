@@ -2,7 +2,10 @@ use std::{error, result};
 
 use thiserror::Error;
 
-use crate::document::{DocumentError, DocumentResult, OffDocument, Vertex};
+use crate::{
+    document::{DocumentError, DocumentResult, OffDocument},
+    geometry::{Face, GeometryError, Vertex},
+};
 
 #[derive(Error, Debug)]
 pub enum ParserError {
@@ -14,6 +17,10 @@ pub enum ParserError {
     InvalidCounts,
     #[error("Vertex has wrong format. Should be: `<x> <y> <z>`")]
     InvalidVertex,
+    #[error("Face has wrong format. Should be: `<vertex count> <vertex index>*`")]
+    InvalidFace,
+    #[error("Invalid geometry")]
+    GeometryError(#[from] GeometryError),
 }
 
 pub type ParserResult<T = ()> = Result<T, ParserError>;
@@ -48,8 +55,9 @@ impl DocumentParser<'_> {
         parser.parse_header()?;
         parser.parse_counts()?;
         parser.parse_vertices()?;
+        parser.parse_faces()?;
 
-        Ok(parser.document)
+        parser.finalize()
     }
 
     // filters empty lines, comments and returns a vector
@@ -119,25 +127,87 @@ impl DocumentParser<'_> {
         assert_eq!(self.state, ParserState::Vertices, "State mismatch");
 
         for _ in 0..self.document.vertex_count {
-            let counts: Vec<&str> = Self::split(self.pop());
+            let vertex_str: Vec<&str> = Self::split(self.pop());
 
-            if counts.len() != 3 {
+            if vertex_str.len() != 3 {
                 return Err(ParserError::InvalidVertex);
             }
 
-            let vertex: Vec<i32> = counts
+            let vertex: Vec<f64> = vertex_str
                 .into_iter()
                 .map(|s| s.parse().map_err(|_| ParserError::InvalidVertex))
-                .collect::<Result<Vec<i32>, ParserError>>()?;
+                .collect::<Result<Vec<f64>, ParserError>>()?;
 
-            self.document.vertices.push(Vertex::from(vertex))
-
+            self.document.vertices.push(Vertex::try_from(vertex)?)
         }
 
         self.state = self.next_state();
         Ok(())
     }
+
+    fn parse_faces(&mut self) -> ParserResult {
+        assert_eq!(self.state, ParserState::Faces, "State mismatch");
+
+        for _ in 0..self.document.face_count {
+            let mut face_str: Vec<&str> = Self::split(self.pop());
+
+            let vertex_count: u32 = face_str[0].parse().map_err(|_| ParserError::InvalidFace)?;
+            face_str = face_str.into_iter().skip(1).collect();
+
+            // sanity check
+            if face_str.len() != vertex_count as usize {
+                return Err(ParserError::InvalidFace);
+            }
+
+            // faces are polygons and might have to be triangulated later. Therefore we require at least three vertices
+            if vertex_count < 3 {
+                return Err(ParserError::InvalidFace);
+            }
+
+            let face: Vec<u32> = face_str
+                .into_iter()
+                .map(|s| s.parse().map_err(|_| ParserError::InvalidFace))
+                .collect::<Result<Vec<u32>, ParserError>>()?;
+
+            self.document.faces.push(Face::try_from(face)?);
+        }
+
+        self.state = self.next_state();
+        Ok(())
+    }
+
+    fn finalize(self) -> DocumentResult {
+        assert_eq!(self.state, ParserState::End, "State mismatch");
+
+        Ok(self.document)
+    }
 }
+
+// trait StrParts<'a> {
+//     fn parts(self) -> Vec<&'a str>;
+// }
+
+// impl<'a> StrParts<'a> for &'a str {
+//     fn parts(self) -> Vec<&'a str> {
+//         self.split(" ")
+//             .filter(|s| !s.is_empty())
+//             .filter(|s| !s.starts_with("#"))
+//             .map(|s| s.trim())
+//             .collect()
+//     }
+// }
+
+// trait IntVec {
+//     fn int_vec(self) -> Vec<i32>;
+// }
+
+// impl IntVec for Vec<&str> {
+//     fn int_vec(self) -> Vec<i32> {
+//         self.into_iter()
+//             .map(|s| s.parse().map_err(|_| ParserError::InvalidCounts))
+//             .collect::<Result<Vec<u32>, ParserError>>()
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
