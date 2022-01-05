@@ -17,10 +17,8 @@ pub enum DocumentError {
 
 pub type DocumentResult<T = OffDocument> = Result<T, DocumentError>;
 
+#[derive(Clone, PartialEq, Debug)]
 pub struct OffDocument {
-    pub vertex_count: u32,
-    pub face_count: u32,
-    pub edge_count: u32,
     pub vertices: Vec<Vertex>,
     pub faces: Vec<Face>,
 }
@@ -28,9 +26,6 @@ pub struct OffDocument {
 impl OffDocument {
     pub(crate) fn new() -> Self {
         Self {
-            vertex_count: 0,
-            face_count: 0,
-            edge_count: 0,
             vertices: Vec::new(),
             faces: Vec::new(),
         }
@@ -55,6 +50,18 @@ impl OffDocument {
 
     fn parse(string: &str) -> DocumentResult {
         DocumentParser::parse(string)
+    }
+
+    fn vertex_count(&self) -> usize {
+        self.vertices.len()
+    }
+
+    fn face_count(&self) -> usize {
+        self.faces.len()
+    }
+
+    fn edge_count(&self) -> usize {
+        self.faces.iter().map(|face| face.vertices.len() - 1).sum()
     }
 }
 

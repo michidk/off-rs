@@ -7,40 +7,60 @@ pub enum GeometryError {
     )]
     VertexOutOfBounds,
     #[error(
-        "A face needs at least integers that reference vertices indices to describe the polygon."
+        "A face needs at least three integers that reference vertices indices to describe the polygon."
     )]
     FaceOutOfBounds,
+    #[error(
+        "A color needs three (RGB) to four (RGBA) values that describe the color (either between 0-1 or 0-255)."
+    )]
+    ColorOutOfBounds,
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Copy, Clone, PartialEq, Debug, Default)]
 pub struct Position {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
 }
 
 impl Position {
-    pub fn new(x: f64, y: f64, z: f64) -> Self {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
 }
 
-impl From<Position> for Vec<f64> {
-    fn from(value: Position) -> Vec<f64> {
+impl From<Position> for Vec<f32> {
+    fn from(value: Position) -> Vec<f32> {
         vec![value.x, value.y, value.z]
     }
 }
 
-#[derive(Debug, PartialEq)]
+impl TryFrom<Vec<f32>> for Position {
+    type Error = GeometryError;
+
+    fn try_from(value: Vec<f32>) -> Result<Self, Self::Error> {
+        if value.len() != 3 {
+            return Err(GeometryError::VertexOutOfBounds);
+        }
+
+        Ok(Self {
+            x: value[0],
+            y: value[1],
+            z: value[2],
+        })
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Color {
-    pub r: f64,
-    pub g: f64,
-    pub b: f64,
-    pub a: f64,
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
 }
 
 impl Color {
-    pub fn new(r: f64, g: f64, b: f64, a: f64) -> Self {
+    pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
 }
@@ -56,88 +76,143 @@ impl Default for Color {
     }
 }
 
-impl From<Color> for Vec<f64> {
-    fn from(value: Color) -> Vec<f64> {
+impl From<Color> for Vec<f32> {
+    fn from(value: Color) -> Vec<f32> {
         vec![value.r, value.g, value.b, value.a]
     }
 }
 
-#[derive(Debug, PartialEq, Default)]
-pub struct Vertex {
-    pub position: Position,
-    pub color: Color,
-}
-
-impl Vertex {
-    pub fn new(position: Position, color: Color) -> Self {
-        Self { position, color }
-    }
-}
-
-impl TryFrom<Vec<f64>> for Vertex {
+impl TryFrom<Vec<f32>> for Color {
     type Error = GeometryError;
 
-    fn try_from(value: Vec<f64>) -> Result<Self, Self::Error> {
-        if value.len() < 3 {
-            return Err(GeometryError::VertexOutOfBounds);
+    fn try_from(value: Vec<f32>) -> Result<Self, Self::Error> {
+        if 3 > value.len() || 4 < value.len() {
+            return Err(GeometryError::ColorOutOfBounds);
         }
-        if value.len() < 6 {
-            Ok(Self::new(
-                Position::new(value[0], value[1], value[2]),
-                Color::default(),
-            ))
-        } else if value.len() < 7 {
-            Ok(Self::new(
-                Position::new(value[0], value[1], value[2]),
-                Color {
-                    r: value[3],
-                    g: value[4],
-                    b: value[5],
-                    ..Default::default()
-                },
-            ))
-        } else {
-            Ok(Self::new(
-                Position::new(value[0], value[1], value[2]),
-                Color::new(value[3], value[4], value[5], value[6]),
-            ))
-        }
+
+        let alpha = if value.len() == 4 { value[3] } else { 1.0 };
+
+        Ok(Self {
+            r: value[0],
+            g: value[1],
+            b: value[2],
+            a: alpha,
+        })
     }
 }
 
-impl From<Vertex> for Vec<f64> {
-    fn from(value: Vertex) -> Vec<f64> {
+impl From<Color> for Vec<u8> {
+    fn from(value: Color) -> Vec<u8> {
         vec![
-            value.position.x,
-            value.position.y,
-            value.position.z,
-            value.color.r,
-            value.color.g,
-            value.color.b,
-            value.color.a,
+            (value.r * 255.0) as u8,
+            (value.g * 255.0) as u8,
+            (value.b * 255.0) as u8,
+            (value.a * 255.0) as u8,
         ]
     }
 }
 
-#[derive(Debug, PartialEq, Default)]
-pub struct Face {
-    pub vertex_count: u32,
-    pub vertices: Vec<u32>,
+impl TryFrom<Vec<u8>> for Color {
+    type Error = GeometryError;
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        if 3 > value.len() || 4 < value.len() {
+            return Err(GeometryError::ColorOutOfBounds);
+        }
+
+        let alpha = if value.len() == 4 {
+            value[3] as f32 / 255.0
+        } else {
+            1.0
+        };
+
+        Ok(Self {
+            r: value[0] as f32 / 255.0,
+            g: value[1] as f32 / 255.0,
+            b: value[2] as f32 / 255.0,
+            a: alpha,
+        })
+    }
 }
 
-impl Face {
-    pub fn new(vertices: Vec<u32>) -> Self {
-        Self {
-            vertex_count: vertices.len() as u32,
-            vertices,
+#[derive(Copy, Clone, PartialEq, Debug, Default)]
+pub struct Vertex {
+    pub position: Position,
+    pub color: Option<Color>,
+}
+
+impl Vertex {
+    pub fn new(position: Position, color: Option<Color>) -> Self {
+        Self { position, color }
+    }
+}
+
+impl TryFrom<Vec<f32>> for Vertex {
+    type Error = GeometryError;
+
+    fn try_from(value: Vec<f32>) -> Result<Self, Self::Error> {
+        if value.len() < 3 {
+            return Err(GeometryError::VertexOutOfBounds);
+        }
+        if value.len() < 6 {
+            Ok(Self::new(value.try_into()?, None))
+        } else {
+            let pos = value[1..=3].to_vec().try_into()?;
+
+            // check the color arguments
+            if value[4..].iter().any(|x| *x >= 0.0 || *x <= 1.0) {
+                // values 0.0 to 1.0
+                Ok(Self::new(
+                    pos,
+                    Some(value[4..].to_vec().try_into()?),
+                ))
+            } else if value[4..].iter().any(|x| *x >= 0.0 || *x <= 255.0) {
+                // values ranging from 0 to 255
+                let color: Vec<u8> = value[4..].iter().map(|x| *x as u8).collect();
+                Ok(Self::new(
+                    pos,
+                    Some(color.try_into()?),
+                ))
+            } else {
+                Err(GeometryError::ColorOutOfBounds)
+            }
         }
     }
 }
 
-impl TryFrom<Vec<u32>> for Face {
+impl From<Vertex> for Vec<f32> {
+    fn from(value: Vertex) -> Vec<f32> {
+        if let Some(color) = value.color {
+            vec![
+                value.position.x,
+                value.position.y,
+                value.position.z,
+                color.r,
+                color.g,
+                color.b,
+                color.a,
+            ]
+        } else {
+            vec![value.position.x, value.position.y, value.position.z]
+        }
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
+pub struct Face {
+    pub vertices: Vec<usize>,
+}
+
+impl Face {
+    pub fn new(vertices: Vec<usize>) -> Self {
+        Self { vertices }
+    }
+}
+
+impl TryFrom<Vec<usize>> for Face {
     type Error = GeometryError;
 
-    fn try_from(value: Vec<u32>) -> Result<Self, Self::Error> {
+    fn try_from(value: Vec<usize>) -> Result<Self, Self::Error> {
         if value.len() < 3 {
             return Err(GeometryError::FaceOutOfBounds);
         }
@@ -145,8 +220,8 @@ impl TryFrom<Vec<u32>> for Face {
     }
 }
 
-impl From<Face> for Vec<u32> {
-    fn from(value: Face) -> Vec<u32> {
+impl From<Face> for Vec<usize> {
+    fn from(value: Face) -> Vec<usize> {
         value.vertices
     }
 }

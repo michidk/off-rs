@@ -1,9 +1,9 @@
-use std::{error, result};
+use std::str::FromStr;
 
 use thiserror::Error;
 
 use crate::{
-    document::{DocumentError, DocumentResult, OffDocument},
+    document::{DocumentResult, OffDocument},
     geometry::{Face, GeometryError, Vertex},
 };
 
@@ -35,8 +35,11 @@ enum ParserState {
 }
 
 pub struct DocumentParser<'a> {
-    lines: Vec<&'a str>,
+    lines: Vec<&'a str>, // TODO: use iterator instead of vec (.lines())
     line: usize,
+    vertex_count: usize,
+    face_count: usize,
+    edge_count: usize,
     state: ParserState,
     document: OffDocument,
 }
@@ -73,8 +76,7 @@ impl DocumentParser<'_> {
 
     fn split(string: &str) -> Vec<&str> {
         string
-            .split(" ")
-            .filter(|s| !s.is_empty())
+            .split_whitespace()
             .filter(|s| !s.starts_with("#"))
             .map(|s| s.trim())
             .collect()
@@ -106,17 +108,18 @@ impl DocumentParser<'_> {
 
         let counts: Vec<&str> = Self::split(self.pop());
 
-        let num: Vec<u32> = counts
+        let num: Vec<usize> = counts
             .into_iter()
             .map(|s| s.parse().map_err(|_| ParserError::InvalidCounts))
-            .collect::<Result<Vec<u32>, ParserError>>()?;
+            .collect::<Result<Vec<usize>, ParserError>>()?;
 
-        self.document.vertex_count = num[0];
+        // TODO: use match
+        self.vertex_count = num[0];
         if num.len() > 1 {
-            self.document.face_count = num[1];
+            self.face_count = num[1];
         }
         if num.len() > 2 {
-            self.document.edge_count = num[2];
+            self.edge_count = num[2];
         }
 
         self.state = self.next_state();
@@ -126,17 +129,17 @@ impl DocumentParser<'_> {
     fn parse_vertices(&mut self) -> ParserResult {
         assert_eq!(self.state, ParserState::Vertices, "State mismatch");
 
-        for _ in 0..self.document.vertex_count {
+        for _ in 0..self.vertex_count {
             let vertex_str: Vec<&str> = Self::split(self.pop());
 
             if vertex_str.len() != 3 {
                 return Err(ParserError::InvalidVertex);
             }
 
-            let vertex: Vec<f64> = vertex_str
+            let vertex: Vec<f32> = vertex_str
                 .into_iter()
                 .map(|s| s.parse().map_err(|_| ParserError::InvalidVertex))
-                .collect::<Result<Vec<f64>, ParserError>>()?;
+                .collect::<Result<Vec<f32>, ParserError>>()?;
 
             self.document.vertices.push(Vertex::try_from(vertex)?)
         }
@@ -148,7 +151,7 @@ impl DocumentParser<'_> {
     fn parse_faces(&mut self) -> ParserResult {
         assert_eq!(self.state, ParserState::Faces, "State mismatch");
 
-        for _ in 0..self.document.face_count {
+        for _ in 0..self.face_count {
             let mut face_str: Vec<&str> = Self::split(self.pop());
 
             let vertex_count: u32 = face_str[0].parse().map_err(|_| ParserError::InvalidFace)?;
@@ -183,31 +186,31 @@ impl DocumentParser<'_> {
     }
 }
 
-// trait StrParts<'a> {
-//     fn parts(self) -> Vec<&'a str>;
-// }
+trait StrParts<'a> {
+    fn parts(self) -> Vec<&'a str>;
+}
 
-// impl<'a> StrParts<'a> for &'a str {
-//     fn parts(self) -> Vec<&'a str> {
-//         self.split(" ")
-//             .filter(|s| !s.is_empty())
-//             .filter(|s| !s.starts_with("#"))
-//             .map(|s| s.trim())
-//             .collect()
-//     }
-// }
+impl<'a> StrParts<'a> for &'a str {
+    fn parts(self) -> Vec<&'a str> {
+        self.split_whitespace()
+            .filter(|s| !s.is_empty())
+            .filter(|s| !s.starts_with("#"))
+            .map(|s| s.trim())
+            .collect()
+    }
+}
 
-// trait IntVec {
-//     fn int_vec(self) -> Vec<i32>;
-// }
+trait ConvertVec {
+    fn convert_vec<T, G>(self) -> Result<Vec<T>, G> where T: FromStr<Err = G>;
+}
 
-// impl IntVec for Vec<&str> {
-//     fn int_vec(self) -> Vec<i32> {
-//         self.into_iter()
-//             .map(|s| s.parse().map_err(|_| ParserError::InvalidCounts))
-//             .collect::<Result<Vec<u32>, ParserError>>()
-//     }
-// }
+impl ConvertVec for Vec<&str> {
+    fn convert_vec<T, G>(self) -> Result<Vec<T>, G> where T: FromStr<Err = G> {
+        self.into_iter()
+            .map(FromStr::from_str)
+            .collect::<Result<Vec<T>, G>>()
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -275,8 +278,8 @@ mod tests {
             document: OffDocument::new(),
         };
         assert!(matches!(parser.parse_counts(), Ok(_)));
-        assert_eq!(parser.document.vertex_count, 1);
-        assert_eq!(parser.document.face_count, 1337);
-        assert_eq!(parser.document.edge_count, 42);
+        assert_eq!(parser.document.vertex_count(), 1);
+        assert_eq!(parser.document.face_count(), 1337);
+        assert_eq!(parser.document.edge_count(), 42);
     }
 }
