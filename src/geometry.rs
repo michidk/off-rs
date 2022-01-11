@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::parser::ParserError;
+
 #[derive(Error, Debug)]
 pub enum GeometryError {
     #[error(
@@ -35,6 +37,7 @@ impl From<Position> for Vec<f32> {
     }
 }
 
+// TODO: move to parser module
 impl TryFrom<Vec<f32>> for Position {
     type Error = GeometryError;
 
@@ -52,20 +55,20 @@ impl TryFrom<Vec<f32>> for Position {
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
-pub struct Color {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
-    pub a: f32,
+pub struct Color<T> {
+    pub r: T,
+    pub g: T,
+    pub b: T,
+    pub a: T,
 }
 
-impl Color {
-    pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
+impl<T> Color<T> {
+    pub fn new(r: T, g: T, b: T, a: T) -> Self {
         Self { r, g, b, a }
     }
 }
 
-impl Default for Color {
+impl Default for Color<f32> {
     fn default() -> Self {
         Self {
             r: 1.0,
@@ -76,13 +79,25 @@ impl Default for Color {
     }
 }
 
-impl From<Color> for Vec<f32> {
-    fn from(value: Color) -> Vec<f32> {
+impl Default for Color<u8> {
+    fn default() -> Self {
+        Self {
+            r: 255,
+            g: 255,
+            b: 255,
+            a: 255,
+        }
+    }
+}
+
+impl<T> From<Color<T>> for Vec<T> {
+    fn from(value: Color<T>) -> Vec<T> {
         vec![value.r, value.g, value.b, value.a]
     }
 }
 
-impl TryFrom<Vec<f32>> for Color {
+// TODO: move to parser module
+impl TryFrom<Vec<f32>> for Color<f32> {
     type Error = GeometryError;
 
     fn try_from(value: Vec<f32>) -> Result<Self, Self::Error> {
@@ -101,8 +116,8 @@ impl TryFrom<Vec<f32>> for Color {
     }
 }
 
-impl From<Color> for Vec<u8> {
-    fn from(value: Color) -> Vec<u8> {
+impl From<Color<u8>> for Vec<u8> {
+    fn from(value: Color<u8>) -> Vec<u8> {
         vec![
             (value.r * 255.0) as u8,
             (value.g * 255.0) as u8,
@@ -112,7 +127,8 @@ impl From<Color> for Vec<u8> {
     }
 }
 
-impl TryFrom<Vec<u8>> for Color {
+// TODO: move to parser module
+impl TryFrom<Vec<u8>> for Color<u8> {
     type Error = GeometryError;
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
@@ -136,18 +152,19 @@ impl TryFrom<Vec<u8>> for Color {
 }
 
 #[derive(Copy, Clone, PartialEq, Debug, Default)]
-pub struct Vertex {
+pub struct Vertex<T> {
     pub position: Position,
-    pub color: Option<Color>,
+    pub color: Option<Color<T>>,
 }
 
-impl Vertex {
-    pub fn new(position: Position, color: Option<Color>) -> Self {
+impl<T> Vertex<T> {
+    pub fn new(position: Position, color: Option<Color<T>>) -> Self {
         Self { position, color }
     }
 }
 
-impl TryFrom<Vec<f32>> for Vertex {
+// TODO: move to parser module
+impl<T> TryFrom<Vec<f32>> for Vertex<T> {
     type Error = GeometryError;
 
     fn try_from(value: Vec<f32>) -> Result<Self, Self::Error> {
@@ -180,8 +197,8 @@ impl TryFrom<Vec<f32>> for Vertex {
     }
 }
 
-impl From<Vertex> for Vec<f32> {
-    fn from(value: Vertex) -> Vec<f32> {
+impl<T> From<Vertex<T>> for Vec<f32> {
+    fn from(value: Vertex<T>) -> Vec<f32> {
         if let Some(color) = value.color {
             vec![
                 value.position.x,
@@ -198,30 +215,35 @@ impl From<Vertex> for Vec<f32> {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
-pub struct Face {
+#[derive(Clone, PartialEq, Debug, Default)]
+pub struct Face<T> {
     pub vertices: Vec<usize>,
+    pub color: Option<Color<T>>,
 }
 
-impl Face {
-    pub fn new(vertices: Vec<usize>) -> Self {
-        Self { vertices }
+impl<T> Face<T> {
+    pub fn new(vertices: Vec<usize>, color: Option<Color<T>>) -> Self {
+        Self { vertices, color }
     }
 }
 
-impl TryFrom<Vec<usize>> for Face {
+// TODO: move to parser module
+impl<T> TryFrom<Vec<usize>> for Face<T> {
     type Error = GeometryError;
 
     fn try_from(value: Vec<usize>) -> Result<Self, Self::Error> {
+        // let vertex_count: u32 = face_str[0].parse().map_err(|_| ParserError::InvalidFace)?;
+        // face_str = face_str.into_iter().skip(1).collect();
+
         if value.len() < 3 {
             return Err(GeometryError::FaceOutOfBounds);
         }
-        Ok(Self::new(value))
+        Ok(Self::new(value, None))
     }
 }
 
-impl From<Face> for Vec<usize> {
-    fn from(value: Face) -> Vec<usize> {
+impl<T> From<Face<T>> for Vec<usize> {
+    fn from(value: Face<T>) -> Vec<usize> {
         value.vertices
     }
 }

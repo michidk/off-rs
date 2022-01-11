@@ -15,15 +15,15 @@ pub enum DocumentError {
     ParserError(#[from] ParserError),
 }
 
-pub type DocumentResult<T = OffDocument> = Result<T, DocumentError>;
+pub type DocumentResult<T, D = OffDocument<T>> = Result<D, DocumentError>;
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct OffDocument {
-    pub vertices: Vec<Vertex>,
-    pub faces: Vec<Face>,
+pub struct OffDocument<T = f32> {
+    pub vertices: Vec<Vertex<T>>,
+    pub faces: Vec<Face<T>>,
 }
 
-impl OffDocument {
+impl<T> OffDocument<T> {
     pub(crate) fn new() -> Self {
         Self {
             vertices: Vec::new(),
@@ -31,7 +31,7 @@ impl OffDocument {
         }
     }
 
-    pub fn from_path(path: &Path) -> DocumentResult {
+    pub fn from_path(path: &Path) -> DocumentResult<T> {
         let file_result = File::open(path);
 
         let mut file = match file_result {
@@ -48,8 +48,8 @@ impl OffDocument {
         Self::parse(&string)
     }
 
-    fn parse(string: &str) -> DocumentResult {
-        DocumentParser::parse(string)
+    fn parse(string: &str) -> DocumentResult<T> {
+        DocumentParser::new(&string).try_parse()
     }
 
     fn vertex_count(&self) -> usize {
@@ -65,15 +65,15 @@ impl OffDocument {
     }
 }
 
-impl FromStr for OffDocument {
+impl<T> FromStr for OffDocument<T> {
     type Err = DocumentError;
 
-    fn from_str(string: &str) -> DocumentResult {
+    fn from_str(string: &str) -> DocumentResult<T> {
         Self::parse(string)
     }
 }
 
-impl Default for OffDocument {
+impl<T> Default for OffDocument<T> {
     fn default() -> Self {
         Self::new()
     }
