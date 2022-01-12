@@ -1,6 +1,6 @@
 use std::{
     iter::{Enumerate, Peekable},
-    str::{FromStr, Lines},
+    str::{FromStr, Lines}, borrow::Cow,
 };
 
 use thiserror::Error;
@@ -46,21 +46,74 @@ impl<'a> Iterator for OffLines<'a> {
     }
 }
 
-// TODO: error kind that we have line index and message
-#[derive(Error, Debug)]
-pub enum ParserError {
-    #[error("First line should be `OFF`")]
+#[derive(Error, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ParserError {
+    kind: ParserErrorKind,
+    line_index: usize,
+    message: Option<Cow<'static, str>>,
+}
+
+impl ParserError {
+    pub fn new(kind: ParserErrorKind, line_index: usize, message: Option<Cow<'static, str>>) -> Self {
+        Self {
+            kind,
+            line_index,
+            message,
+        }
+    }
+
+    pub fn with_message<M: Into<Cow<'static, str>>, O: Into<Option<M>>>(
+        kind: ParserErrorKind,
+        line_index: usize,
+        message: O,
+    ) -> Self {
+        Self {
+            kind,
+            line_index,
+            message: message.into().map(|inner| inner.into()),
+        }
+    }
+
+    pub fn without_message(kind: ParserErrorKind, line_index: usize) -> Self {
+        Self {
+            kind,
+            line_index,
+            message: None,
+        }
+    }
+}
+
+impl std::fmt::Display for ParserError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(
+            f,
+            "{} @ ln:{}{}",
+            self.kind,
+            self.line_index + 1,
+            self.message
+                .as_ref()
+                .map(|msg| format!(" - {}", msg))
+                .unwrap_or_else(|| String::new())
+        )
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ParserErrorKind {
+    Empty,
+    Missing,
+    Invalid,
     InvalidHeader,
-    #[error(
-        "Invalid count format. Second line should be: `<verticex count> <face count> <edge count>`"
-    )]
     InvalidCounts,
-    #[error("Vertex has wrong format. Should be: `<x> <y> <z>`")]
     InvalidVertex,
-    #[error("Face has wrong format. Should be: `<vertex count> <vertex index>*`")]
+    InvalidColor,
     InvalidFace,
-    #[error("Invalid geometry")]
-    GeometryError(#[from] GeometryError),
+}
+
+impl std::fmt::Display for ParserErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        std::fmt::Debug::fmt(self, f)
+    }
 }
 
 pub type ParserResult<T = ()> = Result<T, ParserError>;
@@ -104,10 +157,10 @@ impl<'a> DocumentParser<'a> {
         let (line_index, line) = self
             .lines
             .next()
-            .ok_or_else(|| ParserError::InvalidHeader)?;
+            .ok_or_else(|| ParserError::without_message(ParserErrorKind::Empty, 0))?;
 
         if line != "OFF" {
-            return Err(ParserError::InvalidHeader);
+            return Err(ParserError::with_message(ParserErrorKind::InvalidHeader, line_index, "First non-comment line should be `OFF`"));
         }
 
         Ok(())
@@ -174,10 +227,10 @@ impl<'a> DocumentParser<'a> {
     }
 
     fn parse_position(&mut self, line_index: usize, parts: Vec<&str>) -> ParserResult<Position> {
-        // TODO: dont work if we have colors
-        // if vertex_str.len() != 3 {
-        //     return Err(ParserError::InvalidVertex);
-        // }
+
+        if parts.len() != 3 {
+            return Err(ParserError::InvalidVertex);
+        }
 
         let position_parts: Vec<f32> = parts
             .into_iter()
@@ -279,15 +332,12 @@ trait StrParts<'a> {
 
 impl<'a> StrParts<'a> for &'a str {
     fn split_line(self) -> Vec<&'a str> {
-        if let Some(line) = self.split('#').next() {
-            line.split_whitespace()
-                .map(|s| s.trim())
-                .filter(|s| !s.is_empty())
-                .map_while(|s| (!s.starts_with("#")).then(|| s))
-                .collect()
-        } else {
-            Vec::new()
-        }
+        self.split_whitespace()
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map_while(|s| (!s.starts_with("#")).then(|| s))
+            // .map_while(|s| (!s.starts_with("#")).then_some(s)); currently still unstable (https://github.com/rust-lang/rust/issues/80967)
+            .collect()
     }
 }
 
@@ -352,9 +402,7 @@ mod tests {
     #[test]
     fn test_split_line() {
         assert_eq!("".split_line(), Vec::<&str>::new());
-        assert_eq!("1 2 3 #test".split_line(), vec!["1", "2", "3"]);
-        assert_eq!("2 2#test".split_line(), vec!["2", "2"]);
-        assert_eq!("2 2#test 3 4".split_line(), vec!["2", "2"]);
+        assert_eq!("1 2 3".split_line(), vec!["1", "2", "3"]);
     }
 
     // #[test]
