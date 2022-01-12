@@ -25,7 +25,7 @@ pub struct ParserOptions {
 impl Default for ParserOptions {
     fn default() -> Self {
         Self {
-            color_format: ColorFormat::RGBAFloat,
+            color_format: Default::default(),
         }
     }
 }
@@ -62,7 +62,7 @@ impl OffDocument {
     }
 
     pub fn parse(string: &str, options: ParserOptions) -> DocumentResult {
-        DocumentParser::new(&string, options).try_parse()
+        DocumentParser::new(&string, options).parse()
     }
 
     pub fn vertex_count(&self) -> usize {

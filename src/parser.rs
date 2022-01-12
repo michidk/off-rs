@@ -7,7 +7,7 @@ use thiserror::Error;
 
 use crate::{
     document::{DocumentResult, OffDocument, ParserOptions},
-    geometry::{ColorFormat, Face, GeometryError, Vertex},
+    geometry::{Color, ColorFormat, Face, GeometryError, Position, Vertex},
 };
 
 // line iterator by github.com/Shemnei
@@ -65,22 +65,12 @@ pub enum ParserError {
 
 pub type ParserResult<T = ()> = Result<T, ParserError>;
 
-#[derive(Debug, Clone, PartialEq)]
-enum ParserState {
-    Header,
-    Counts,
-    Vertices,
-    Faces,
-    End,
-}
-
 #[derive(Debug, Clone)]
 pub struct DocumentParser<'a> {
     lines: Peekable<OffLines<'a>>,
     vertex_count: usize,
     face_count: usize,
     edge_count: usize,
-    state: ParserState,
     document: OffDocument,
     options: ParserOptions,
 }
@@ -94,13 +84,12 @@ impl<'a> DocumentParser<'a> {
             vertex_count: 0,
             face_count: 0,
             edge_count: 0,
-            state: ParserState::Header,
             document: OffDocument::new(),
             options,
         }
     }
 
-    pub fn try_parse(mut self) -> DocumentResult {
+    pub fn parse(mut self) -> DocumentResult {
         self.parse_header()?;
         self.parse_counts()?;
         self.parse_vertices()?;
@@ -111,27 +100,7 @@ impl<'a> DocumentParser<'a> {
         self.finalize()
     }
 
-    fn split(string: &str) -> Vec<&str> {
-        string
-            .split_whitespace()
-            .filter(|s| !s.starts_with("#"))
-            .map(|s| s.trim())
-            .collect()
-    }
-
-    fn next_state(&self) -> ParserState {
-        match self.state {
-            ParserState::Header => ParserState::Counts,
-            ParserState::Counts => ParserState::Vertices,
-            ParserState::Vertices => ParserState::Faces,
-            ParserState::Faces => ParserState::End,
-            ParserState::End => panic!("There is no state after the end state"),
-        }
-    }
-
     fn parse_header(&mut self) -> ParserResult {
-        assert_eq!(self.state, ParserState::Header, "State mismatch");
-
         let (line_index, line) = self
             .lines
             .next()
@@ -141,18 +110,15 @@ impl<'a> DocumentParser<'a> {
             return Err(ParserError::InvalidHeader);
         }
 
-        self.state = self.next_state();
         Ok(())
     }
 
     fn parse_counts(&mut self) -> ParserResult {
-        assert_eq!(self.state, ParserState::Counts, "State mismatch");
-
         let (line_index, line) = self
             .lines
             .next()
             .ok_or_else(|| ParserError::InvalidCounts)?;
-        let counts: Vec<&str> = Self::split(line);
+        let counts: Vec<&str> = line.split_line();
 
         let num: Vec<usize> = counts
             .into_iter()
@@ -172,85 +138,154 @@ impl<'a> DocumentParser<'a> {
             [] => {}
         }
 
-        self.state = self.next_state();
         Ok(())
     }
 
     fn parse_vertices(&mut self) -> ParserResult {
-        assert_eq!(self.state, ParserState::Vertices, "State mismatch");
-
         for _ in 0..self.vertex_count {
             let (line_index, line) = self
                 .lines
                 .next()
                 .ok_or_else(|| ParserError::InvalidVertex)?;
-            let vertex_str: Vec<&str> = Self::split(line);
 
-            if vertex_str.len() != 3 {
-                return Err(ParserError::InvalidVertex);
-            }
-
-            let vertex: Vec<f32> = vertex_str
-                .into_iter()
-                .map(|s| s.parse().map_err(|_| ParserError::InvalidVertex))
-                .collect::<Result<Vec<f32>, ParserError>>()?;
-
-            self.document.vertices.push(Vertex::try_from(vertex)?)
+            let parts = line.split_line();
+            let vertex = self.parse_vertex(line_index, parts)?;
+            self.document.vertices.push(vertex);
         }
 
-        self.state = self.next_state();
         Ok(())
+    }
+
+    fn parse_vertex(&mut self, line_index: usize, parts: Vec<&str>) -> ParserResult<Vertex> {
+        // TODO: dont work if we have colors
+        // if vertex_str.len() != 3 {
+        //     return Err(ParserError::InvalidVertex);
+        // }
+
+        let position = self.parse_position(line_index, parts.clone())?;
+
+        let color = if parts.len() > 3 {
+            Some(self.parse_color(line_index, parts[4..].to_vec())?)
+        } else {
+            None
+        };
+
+        Ok(Vertex {
+            position,
+            color,
+        })
+    }
+
+    fn parse_position(&mut self, line_index: usize, parts: Vec<&str>) -> ParserResult<Position> {
+        // TODO: dont work if we have colors
+        // if vertex_str.len() != 3 {
+        //     return Err(ParserError::InvalidVertex);
+        // }
+
+        let position_parts: Vec<f32> = parts
+            .into_iter()
+            .take(3)
+            .map(|s| s.parse().map_err(|_| ParserError::InvalidVertex))
+            .collect::<Result<Vec<f32>, ParserError>>()?;
+
+        Ok(Position::try_from(position_parts)?)
+    }
+
+    fn parse_color(&mut self, line_index: usize, parts: Vec<&str>) -> ParserResult<Color> {
+        let color_elems = parts
+            .into_iter()
+            .take(self.options.color_format.element_count());
+
+        let color_float = if self.options.color_format.is_float() {
+            // directly parse as f32
+            color_elems
+                .map(|s| s.parse::<f32>().map_err(|_| ParserError::InvalidVertex))
+                .collect::<Result<Vec<f32>, ParserError>>()
+            // TODO: check size
+        } else {
+            // parse as u8 and convert to f32
+            color_elems
+                .map(|s| {
+                    s.parse::<u8>()
+                        .map(|val| val as f32)
+                        .map_err(|_| ParserError::InvalidVertex)
+                })
+                .collect::<Result<Vec<f32>, ParserError>>()
+            // TODO: check size
+        }?;
+        Color::try_from(color_float).map_err(|_| ParserError::InvalidVertex)
     }
 
     fn parse_faces(&mut self) -> ParserResult {
-        assert_eq!(self.state, ParserState::Faces, "State mismatch");
-
         for _ in 0..self.face_count {
             let (line_index, line) = self.lines.next().ok_or_else(|| ParserError::InvalidFace)?;
-            let mut face_str: Vec<&str> = Self::split(line);
+            let mut parts: Vec<&str> = line.split_line();
 
-            let vertex_count: u32 = face_str[0].parse().map_err(|_| ParserError::InvalidFace)?;
-            face_str = face_str.into_iter().skip(1).collect();
-
-            // // sanity check
-            // if face_str.len() != vertex_count as usize {
-            //     return Err(ParserError::InvalidFace);
-            // }
-
-            // faces are polygons and might have to be triangulated later. Therefore we require at least three vertices
-            // if vertex_count < 3 {
-            //     return Err(ParserError::InvalidFace);
-            // }
-
-            let face: Vec<usize> = face_str
-                .into_iter()
-                .map(|s| s.parse().map_err(|_| ParserError::InvalidFace))
-                .collect::<Result<Vec<usize>, ParserError>>()?;
-
-            self.document.faces.push(Face::try_from(face)?);
+            let face = self.parse_face(line_index, parts)?;
+            self.document.faces.push(face);
         }
 
-        self.state = self.next_state();
         Ok(())
     }
 
-    fn finalize(self) -> DocumentResult {
-        assert_eq!(self.state, ParserState::End, "State mismatch");
+    fn parse_face(&mut self, line_index: usize, mut parts: Vec<&str>) -> ParserResult<Face> {
 
+        let vertex_count: usize = parts[0].parse().map_err(|_| ParserError::InvalidFace)?;
+        parts = parts[1..].to_vec();
+
+        // // sanity check
+        // if face_str.len() != vertex_count as usize {
+        //     return Err(ParserError::InvalidFace);
+        // }
+
+        // faces are polygons and might have to be triangulated later. Therefore we require at least three vertices
+        // if vertex_count < 3 {
+        //     return Err(ParserError::InvalidFace);
+        // }
+        let vertices = self.parse_face_index(line_index, vertex_count, parts.clone())?;
+
+        let color = if parts.len() > 3 {
+            Some(self.parse_color(line_index, parts[4..].to_vec())?)
+        } else {
+            None
+        };
+        Ok(Face {
+            vertices,
+            color
+        })
+    }
+
+    fn parse_face_index(&mut self, line_index: usize, vertex_count: usize, parts: Vec<&str>) -> ParserResult<Vec<usize>> {
+        // TODO: dont work if we have colors
+        // if vertex_str.len() != 3 {
+        //     return Err(ParserError::InvalidVertex);
+        // }
+
+        let vertices: Vec<usize> = parts
+            .into_iter()
+            .take(vertex_count)
+            .map(|s| s.parse().map_err(|_| ParserError::InvalidFace))
+            .collect::<Result<Vec<usize>, ParserError>>()?;
+
+        Ok(vertices)
+    }
+
+    fn finalize(self) -> DocumentResult {
         Ok(self.document)
     }
 }
 
 trait StrParts<'a> {
-    fn parts(self) -> Vec<&'a str>;
+    fn split_line(self) -> Vec<&'a str>;
 }
 
 impl<'a> StrParts<'a> for &'a str {
-    fn parts(self) -> Vec<&'a str> {
+    fn split_line(self) -> Vec<&'a str> {
         self.split_whitespace()
-            .filter(|s| !s.is_empty())
-            .filter(|s| !s.starts_with("#"))
             .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map_while(|s| (!s.starts_with("#")).then(|| s))
+            // .map_while(|s| (!s.starts_with("#")).then_some(s)); currently still unstable (https://github.com/rust-lang/rust/issues/80967)
             .collect()
     }
 }
@@ -271,6 +306,43 @@ impl ConvertVec for Vec<&str> {
             .collect::<Result<Vec<T>, G>>()
     }
 }
+
+impl TryFrom<Vec<f32>> for Color {
+    type Error = GeometryError;
+
+    fn try_from(value: Vec<f32>) -> Result<Self, Self::Error> {
+        if 3 > value.len() || 4 < value.len() {
+            return Err(GeometryError::ColorOutOfBounds);
+        }
+
+        let alpha = if value.len() == 4 { value[3] } else { 1.0 };
+
+        Ok(Self {
+            r: value[0],
+            g: value[1],
+            b: value[2],
+            a: alpha,
+        })
+    }
+}
+
+impl TryFrom<Vec<f32>> for Position {
+    type Error = GeometryError;
+
+    fn try_from(value: Vec<f32>) -> Result<Self, Self::Error> {
+        if value.len() != 3 {
+            return Err(GeometryError::VertexOutOfBounds);
+        }
+
+        Ok(Self {
+            x: value[0],
+            y: value[1],
+            z: value[2],
+        })
+    }
+}
+
+
 
 #[cfg(test)]
 #[allow(unused)]
