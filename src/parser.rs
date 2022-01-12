@@ -170,10 +170,7 @@ impl<'a> DocumentParser<'a> {
             None
         };
 
-        Ok(Vertex {
-            position,
-            color,
-        })
+        Ok(Vertex { position, color })
     }
 
     fn parse_position(&mut self, line_index: usize, parts: Vec<&str>) -> ParserResult<Position> {
@@ -229,7 +226,6 @@ impl<'a> DocumentParser<'a> {
     }
 
     fn parse_face(&mut self, line_index: usize, mut parts: Vec<&str>) -> ParserResult<Face> {
-
         let vertex_count: usize = parts[0].parse().map_err(|_| ParserError::InvalidFace)?;
         parts = parts[1..].to_vec();
 
@@ -249,13 +245,15 @@ impl<'a> DocumentParser<'a> {
         } else {
             None
         };
-        Ok(Face {
-            vertices,
-            color
-        })
+        Ok(Face { vertices, color })
     }
 
-    fn parse_face_index(&mut self, line_index: usize, vertex_count: usize, parts: Vec<&str>) -> ParserResult<Vec<usize>> {
+    fn parse_face_index(
+        &mut self,
+        line_index: usize,
+        vertex_count: usize,
+        parts: Vec<&str>,
+    ) -> ParserResult<Vec<usize>> {
         // TODO: dont work if we have colors
         // if vertex_str.len() != 3 {
         //     return Err(ParserError::InvalidVertex);
@@ -281,12 +279,15 @@ trait StrParts<'a> {
 
 impl<'a> StrParts<'a> for &'a str {
     fn split_line(self) -> Vec<&'a str> {
-        self.split_whitespace()
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty())
-            .map_while(|s| (!s.starts_with("#")).then(|| s))
-            // .map_while(|s| (!s.starts_with("#")).then_some(s)); currently still unstable (https://github.com/rust-lang/rust/issues/80967)
-            .collect()
+        if let Some(line) = self.split('#').next() {
+            line.split_whitespace()
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .map_while(|s| (!s.starts_with("#")).then(|| s))
+                .collect()
+        } else {
+            Vec::new()
+        }
     }
 }
 
@@ -342,13 +343,19 @@ impl TryFrom<Vec<f32>> for Position {
     }
 }
 
-
-
 #[cfg(test)]
 #[allow(unused)]
 mod tests {
 
     use super::*;
+
+    #[test]
+    fn test_split_line() {
+        assert_eq!("".split_line(), Vec::<&str>::new());
+        assert_eq!("1 2 3 #test".split_line(), vec!["1", "2", "3"]);
+        assert_eq!("2 2#test".split_line(), vec!["2", "2"]);
+        assert_eq!("2 2#test 3 4".split_line(), vec!["2", "2"]);
+    }
 
     // #[test]
     // #[should_panic]
