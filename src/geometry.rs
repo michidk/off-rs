@@ -1,7 +1,5 @@
 use thiserror::Error;
 
-use crate::parser::ParserError;
-
 #[derive(Error, Debug)]
 pub enum GeometryError {
     #[error(
@@ -55,20 +53,28 @@ impl TryFrom<Vec<f32>> for Position {
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
-pub struct Color<T> {
-    pub r: T,
-    pub g: T,
-    pub b: T,
-    pub a: T,
+pub enum ColorFormat {
+    RGBFloat,    // (0.0, 0.0, 0.0) to (1.0, 1.0, 1.0)
+    RGBAFloat,   // (0.0, 0.0, 0.0, 0.0) to (1.0, 1.0, 1.0, 1.0)
+    RGBInteger,  // (0, 0, 0) to (255, 255, 255)
+    RGBAInteger, // (0, 0, 0, 0) to (255, 255, 255, 255)
 }
 
-impl<T> Color<T> {
-    pub fn new(r: T, g: T, b: T, a: T) -> Self {
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct Color {
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
+}
+
+impl Color {
+    pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
 }
 
-impl Default for Color<f32> {
+impl Default for Color {
     fn default() -> Self {
         Self {
             r: 1.0,
@@ -79,25 +85,14 @@ impl Default for Color<f32> {
     }
 }
 
-impl Default for Color<u8> {
-    fn default() -> Self {
-        Self {
-            r: 255,
-            g: 255,
-            b: 255,
-            a: 255,
-        }
-    }
-}
-
-impl<T> From<Color<T>> for Vec<T> {
-    fn from(value: Color<T>) -> Vec<T> {
+impl From<Color> for Vec<f32> {
+    fn from(value: Color) -> Vec<f32> {
         vec![value.r, value.g, value.b, value.a]
     }
 }
 
 // TODO: move to parser module
-impl TryFrom<Vec<f32>> for Color<f32> {
+impl TryFrom<Vec<f32>> for Color {
     type Error = GeometryError;
 
     fn try_from(value: Vec<f32>) -> Result<Self, Self::Error> {
@@ -116,8 +111,8 @@ impl TryFrom<Vec<f32>> for Color<f32> {
     }
 }
 
-impl From<Color<u8>> for Vec<u8> {
-    fn from(value: Color<u8>) -> Vec<u8> {
+impl From<Color> for Vec<u8> {
+    fn from(value: Color) -> Vec<u8> {
         vec![
             (value.r * 255.0) as u8,
             (value.g * 255.0) as u8,
@@ -128,7 +123,7 @@ impl From<Color<u8>> for Vec<u8> {
 }
 
 // TODO: move to parser module
-impl TryFrom<Vec<u8>> for Color<u8> {
+impl TryFrom<Vec<u8>> for Color {
     type Error = GeometryError;
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
@@ -152,19 +147,19 @@ impl TryFrom<Vec<u8>> for Color<u8> {
 }
 
 #[derive(Copy, Clone, PartialEq, Debug, Default)]
-pub struct Vertex<T> {
+pub struct Vertex {
     pub position: Position,
-    pub color: Option<Color<T>>,
+    pub color: Option<Color>,
 }
 
-impl<T> Vertex<T> {
-    pub fn new(position: Position, color: Option<Color<T>>) -> Self {
+impl Vertex {
+    pub fn new(position: Position, color: Option<Color>) -> Self {
         Self { position, color }
     }
 }
 
 // TODO: move to parser module
-impl<T> TryFrom<Vec<f32>> for Vertex<T> {
+impl TryFrom<Vec<f32>> for Vertex {
     type Error = GeometryError;
 
     fn try_from(value: Vec<f32>) -> Result<Self, Self::Error> {
@@ -179,17 +174,11 @@ impl<T> TryFrom<Vec<f32>> for Vertex<T> {
             // check the color arguments
             if value[4..].iter().any(|x| *x >= 0.0 || *x <= 1.0) {
                 // values 0.0 to 1.0
-                Ok(Self::new(
-                    pos,
-                    Some(value[4..].to_vec().try_into()?),
-                ))
+                Ok(Self::new(pos, Some(value[4..].to_vec().try_into()?)))
             } else if value[4..].iter().any(|x| *x >= 0.0 || *x <= 255.0) {
                 // values ranging from 0 to 255
                 let color: Vec<u8> = value[4..].iter().map(|x| *x as u8).collect();
-                Ok(Self::new(
-                    pos,
-                    Some(color.try_into()?),
-                ))
+                Ok(Self::new(pos, Some(color.try_into()?)))
             } else {
                 Err(GeometryError::ColorOutOfBounds)
             }
@@ -197,8 +186,8 @@ impl<T> TryFrom<Vec<f32>> for Vertex<T> {
     }
 }
 
-impl<T> From<Vertex<T>> for Vec<f32> {
-    fn from(value: Vertex<T>) -> Vec<f32> {
+impl From<Vertex> for Vec<f32> {
+    fn from(value: Vertex) -> Vec<f32> {
         if let Some(color) = value.color {
             vec![
                 value.position.x,
@@ -216,19 +205,19 @@ impl<T> From<Vertex<T>> for Vec<f32> {
 }
 
 #[derive(Clone, PartialEq, Debug, Default)]
-pub struct Face<T> {
+pub struct Face {
     pub vertices: Vec<usize>,
-    pub color: Option<Color<T>>,
+    pub color: Option<Color>,
 }
 
-impl<T> Face<T> {
-    pub fn new(vertices: Vec<usize>, color: Option<Color<T>>) -> Self {
+impl Face {
+    pub fn new(vertices: Vec<usize>, color: Option<Color>) -> Self {
         Self { vertices, color }
     }
 }
 
 // TODO: move to parser module
-impl<T> TryFrom<Vec<usize>> for Face<T> {
+impl TryFrom<Vec<usize>> for Face {
     type Error = GeometryError;
 
     fn try_from(value: Vec<usize>) -> Result<Self, Self::Error> {
@@ -242,8 +231,8 @@ impl<T> TryFrom<Vec<usize>> for Face<T> {
     }
 }
 
-impl<T> From<Face<T>> for Vec<usize> {
-    fn from(value: Face<T>) -> Vec<usize> {
+impl From<Face> for Vec<usize> {
+    fn from(value: Face) -> Vec<usize> {
         value.vertices
     }
 }

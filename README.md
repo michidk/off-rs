@@ -6,6 +6,7 @@ This implementation follows the spec from the Princeton Shape Benchmark [the spe
 Sample file:
 
 ```off
+# this file header has to be the first instruction
 OFF
 # cube.off
 # A cube

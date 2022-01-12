@@ -4,7 +4,7 @@ use std::path::Path;
 use std::str::FromStr;
 use thiserror::Error;
 
-use crate::geometry::{Face, Vertex};
+use crate::geometry::{ColorFormat, Face, Vertex};
 use crate::parser::{DocumentParser, ParserError};
 
 #[derive(Error, Debug)]
@@ -15,15 +15,28 @@ pub enum DocumentError {
     ParserError(#[from] ParserError),
 }
 
-pub type DocumentResult<T, D = OffDocument<T>> = Result<D, DocumentError>;
+pub type DocumentResult<D = OffDocument> = Result<D, DocumentError>;
 
-#[derive(Clone, PartialEq, Debug)]
-pub struct OffDocument<T = f32> {
-    pub vertices: Vec<Vertex<T>>,
-    pub faces: Vec<Face<T>>,
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct ParserOptions {
+    pub color_format: ColorFormat,
 }
 
-impl<T> OffDocument<T> {
+impl Default for ParserOptions {
+    fn default() -> Self {
+        Self {
+            color_format: ColorFormat::RGBAFloat,
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct OffDocument {
+    pub vertices: Vec<Vertex>,
+    pub faces: Vec<Face>,
+}
+
+impl OffDocument {
     pub(crate) fn new() -> Self {
         Self {
             vertices: Vec::new(),
@@ -31,7 +44,7 @@ impl<T> OffDocument<T> {
         }
     }
 
-    pub fn from_path(path: &Path) -> DocumentResult<T> {
+    pub fn from_path(path: &Path, options: ParserOptions) -> DocumentResult {
         let file_result = File::open(path);
 
         let mut file = match file_result {
@@ -45,35 +58,35 @@ impl<T> OffDocument<T> {
             Err(inner) => return Err(DocumentError::IOError(inner)),
         };
 
-        Self::parse(&string)
+        Self::parse(&string, options)
     }
 
-    fn parse(string: &str) -> DocumentResult<T> {
-        DocumentParser::new(&string).try_parse()
+    pub fn parse(string: &str, options: ParserOptions) -> DocumentResult {
+        DocumentParser::new(&string, options).try_parse()
     }
 
-    fn vertex_count(&self) -> usize {
+    pub fn vertex_count(&self) -> usize {
         self.vertices.len()
     }
 
-    fn face_count(&self) -> usize {
+    pub fn face_count(&self) -> usize {
         self.faces.len()
     }
 
-    fn edge_count(&self) -> usize {
+    pub fn edge_count(&self) -> usize {
         self.faces.iter().map(|face| face.vertices.len() - 1).sum()
     }
 }
 
-impl<T> FromStr for OffDocument<T> {
+impl FromStr for OffDocument {
     type Err = DocumentError;
 
-    fn from_str(string: &str) -> DocumentResult<T> {
-        Self::parse(string)
+    fn from_str(string: &str) -> DocumentResult {
+        Self::parse(string, Default::default())
     }
 }
 
-impl<T> Default for OffDocument<T> {
+impl Default for OffDocument {
     fn default() -> Self {
         Self::new()
     }

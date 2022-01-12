@@ -1,10 +1,13 @@
-use std::{str::{FromStr, Lines}, iter::{Enumerate, Peekable}};
+use std::{
+    iter::{Enumerate, Peekable},
+    str::{FromStr, Lines},
+};
 
 use thiserror::Error;
 
 use crate::{
-    document::{DocumentResult, OffDocument},
-    geometry::{Face, GeometryError, Vertex},
+    document::{DocumentResult, OffDocument, ParserOptions},
+    geometry::{ColorFormat, Face, GeometryError, Vertex},
 };
 
 // line iterator by github.com/Shemnei
@@ -12,7 +15,6 @@ use crate::{
 pub struct OffLines<'a> {
     lines: Enumerate<Lines<'a>>,
 }
-
 
 impl<'a> OffLines<'a> {
     pub fn new(s: &'a str) -> Self {
@@ -43,7 +45,6 @@ impl<'a> Iterator for OffLines<'a> {
         None
     }
 }
-
 
 // TODO: error kind that we have line index and message
 #[derive(Error, Debug)]
@@ -80,12 +81,12 @@ pub struct DocumentParser<'a> {
     face_count: usize,
     edge_count: usize,
     state: ParserState,
-    document: OffDocument<T>,
+    document: OffDocument,
+    options: ParserOptions,
 }
 
 impl<'a> DocumentParser<'a> {
-
-    pub fn new<S: AsRef<str>>(s: &'a S) -> Self {
+    pub fn new<S: AsRef<str>>(s: &'a S, options: ParserOptions) -> Self {
         let lines = OffLines::new(s.as_ref()).peekable();
 
         DocumentParser {
@@ -94,11 +95,12 @@ impl<'a> DocumentParser<'a> {
             face_count: 0,
             edge_count: 0,
             state: ParserState::Header,
-            document: OffDocument<T>::new(),
+            document: OffDocument::new(),
+            options,
         }
     }
 
-    pub fn try_parse(mut self) -> DocumentResult<T> {
+    pub fn try_parse(mut self) -> DocumentResult {
         self.parse_header()?;
         self.parse_counts()?;
         self.parse_vertices()?;
@@ -131,9 +133,9 @@ impl<'a> DocumentParser<'a> {
         assert_eq!(self.state, ParserState::Header, "State mismatch");
 
         let (line_index, line) = self
-                .lines
-                .next()
-                .ok_or_else(|| ParserError::InvalidHeader)?;
+            .lines
+            .next()
+            .ok_or_else(|| ParserError::InvalidHeader)?;
 
         if line != "OFF" {
             return Err(ParserError::InvalidHeader);
@@ -147,9 +149,9 @@ impl<'a> DocumentParser<'a> {
         assert_eq!(self.state, ParserState::Counts, "State mismatch");
 
         let (line_index, line) = self
-                .lines
-                .next()
-                .ok_or_else(|| ParserError::InvalidCounts)?;
+            .lines
+            .next()
+            .ok_or_else(|| ParserError::InvalidCounts)?;
         let counts: Vec<&str> = Self::split(line);
 
         let num: Vec<usize> = counts
@@ -204,10 +206,7 @@ impl<'a> DocumentParser<'a> {
         assert_eq!(self.state, ParserState::Faces, "State mismatch");
 
         for _ in 0..self.face_count {
-            let (line_index, line) = self
-                .lines
-                .next()
-                .ok_or_else(|| ParserError::InvalidFace)?;
+            let (line_index, line) = self.lines.next().ok_or_else(|| ParserError::InvalidFace)?;
             let mut face_str: Vec<&str> = Self::split(line);
 
             let vertex_count: u32 = face_str[0].parse().map_err(|_| ParserError::InvalidFace)?;
@@ -257,11 +256,16 @@ impl<'a> StrParts<'a> for &'a str {
 }
 
 trait ConvertVec {
-    fn convert_vec<T, G>(self) -> Result<Vec<T>, G> where T: FromStr<Err = G>;
+    fn convert_vec<T, G>(self) -> Result<Vec<T>, G>
+    where
+        T: FromStr<Err = G>;
 }
 
 impl ConvertVec for Vec<&str> {
-    fn convert_vec<T, G>(self) -> Result<Vec<T>, G> where T: FromStr<Err = G> {
+    fn convert_vec<T, G>(self) -> Result<Vec<T>, G>
+    where
+        T: FromStr<Err = G>,
+    {
         self.into_iter()
             .map(FromStr::from_str)
             .collect::<Result<Vec<T>, G>>()

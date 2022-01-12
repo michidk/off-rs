@@ -1,6 +1,6 @@
 use off_rs::{
-    document::OffDocument,
-    geometry::{Face, Position, Vertex},
+    document::{OffDocument, ParserOptions},
+    geometry::{ColorFormat, Face, Position, Vertex},
 };
 
 #[test]
@@ -28,7 +28,7 @@ OFF
   4  3 2 6 7  0.000 0.700 0.300 0.75
   4  6 5 4 7  0.000 1.000 0.000 0.75
 "#;
-    let off = content.parse::<OffDocument<f32>>();
+    let off = content.parse::<OffDocument>().unwrap();
     println!("{:#?}", off);
 }
 
@@ -55,7 +55,11 @@ OFF
 4  3 2 6 7  0 0 255
 4  6 5 4 7  255 0 0
 "#;
-    let off = content.parse::<OffDocument<u8>>();
+    let options = ParserOptions {
+        color_format: ColorFormat::RGBAInteger,
+        ..Default::default()
+    };
+    let off = OffDocument::parse(content, options);
     println!("{:#?}", off);
 }
 
