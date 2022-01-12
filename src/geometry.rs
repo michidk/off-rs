@@ -1,21 +1,3 @@
-use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum GeometryError {
-    #[error(
-        "A vertex needs three integers to describe the x, y and z component of it's position."
-    )]
-    VertexOutOfBounds,
-    #[error(
-        "A face needs at least three integers that reference vertices indices to describe the polygon."
-    )]
-    FaceOutOfBounds,
-    #[error(
-        "A color needs three (RGB) to four (RGBA) values that describe the color (either between 0-1 or 0-255)."
-    )]
-    ColorOutOfBounds,
-}
-
 #[derive(Copy, Clone, PartialEq, Debug, Default)]
 pub struct Position {
     pub x: f32,

@@ -13,6 +13,3 @@ homepage = "https://github.com/michidk/off_rs"
 [lib]
 name = "off_rs"
 path = "src/lib.rs"
-
-[dependencies]
-thiserror = "1.0.30"

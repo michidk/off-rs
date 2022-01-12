@@ -1,13 +1,12 @@
 use std::{
+    borrow::Cow,
     iter::{Enumerate, Peekable},
-    str::{FromStr, Lines}, borrow::Cow,
+    str::{FromStr, Lines},
 };
-
-use thiserror::Error;
 
 use crate::{
     document::{DocumentResult, OffDocument, ParserOptions},
-    geometry::{Color, ColorFormat, Face, GeometryError, Position, Vertex},
+    geometry::{Color, Face, Position, Vertex},
 };
 
 // line iterator by github.com/Shemnei
@@ -46,7 +45,7 @@ impl<'a> Iterator for OffLines<'a> {
     }
 }
 
-#[derive(Error, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ParserError {
     kind: ParserErrorKind,
     line_index: usize,
@@ -54,7 +53,11 @@ pub struct ParserError {
 }
 
 impl ParserError {
-    pub fn new(kind: ParserErrorKind, line_index: usize, message: Option<Cow<'static, str>>) -> Self {
+    pub fn new(
+        kind: ParserErrorKind,
+        line_index: usize,
+        message: Option<Cow<'static, str>>,
+    ) -> Self {
         Self {
             kind,
             line_index,
@@ -83,6 +86,8 @@ impl ParserError {
     }
 }
 
+impl std::error::Error for ParserError { }
+
 impl std::fmt::Display for ParserError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
@@ -105,9 +110,10 @@ pub enum ParserErrorKind {
     Invalid,
     InvalidHeader,
     InvalidCounts,
-    InvalidVertex,
+    InvalidVertexPosition,
     InvalidColor,
     InvalidFace,
+    InvalidFaceIndex,
 }
 
 impl std::fmt::Display for ParserErrorKind {
@@ -160,7 +166,11 @@ impl<'a> DocumentParser<'a> {
             .ok_or_else(|| ParserError::without_message(ParserErrorKind::Empty, 0))?;
 
         if line != "OFF" {
-            return Err(ParserError::with_message(ParserErrorKind::InvalidHeader, line_index, "First non-comment line should be `OFF`"));
+            return Err(ParserError::with_message(
+                ParserErrorKind::InvalidHeader,
+                line_index,
+                "First non-comment line should be `OFF`",
+            ));
         }
 
         Ok(())
@@ -170,12 +180,20 @@ impl<'a> DocumentParser<'a> {
         let (line_index, line) = self
             .lines
             .next()
-            .ok_or_else(|| ParserError::InvalidCounts)?;
+            .ok_or_else(|| ParserError::without_message(ParserErrorKind::Missing, 0))?;
         let counts: Vec<&str> = line.split_line();
 
         let num: Vec<usize> = counts
             .into_iter()
-            .map(|s| s.parse().map_err(|_| ParserError::InvalidCounts))
+            .map(|s| {
+                s.parse().map_err(|err| {
+                    ParserError::with_message(
+                        ParserErrorKind::InvalidCounts,
+                        line_index,
+                        format!("Failed to parse count as number ({})", err),
+                    )
+                })
+            })
             .collect::<Result<Vec<usize>, ParserError>>()?;
 
         // TODO: dont check that this element exist because we already have the code for that somewhere
@@ -196,10 +214,9 @@ impl<'a> DocumentParser<'a> {
 
     fn parse_vertices(&mut self) -> ParserResult {
         for _ in 0..self.vertex_count {
-            let (line_index, line) = self
-                .lines
-                .next()
-                .ok_or_else(|| ParserError::InvalidVertex)?;
+            let (line_index, line) = self.lines.next().ok_or_else(|| {
+                ParserError::with_message(ParserErrorKind::Missing, 0, "Expected vertex definition")
+            })?;
 
             let parts = line.split_line();
             let vertex = self.parse_vertex(line_index, parts)?;
@@ -227,15 +244,29 @@ impl<'a> DocumentParser<'a> {
     }
 
     fn parse_position(&mut self, line_index: usize, parts: Vec<&str>) -> ParserResult<Position> {
-
         if parts.len() != 3 {
-            return Err(ParserError::InvalidVertex);
+            return Err(ParserError::with_message(
+                ParserErrorKind::InvalidVertexPosition,
+                line_index,
+                format!(
+                    "Invalid number of coordinates given (expected: 3, actual: {})",
+                    parts.len()
+                ),
+            ));
         }
 
         let position_parts: Vec<f32> = parts
             .into_iter()
             .take(3)
-            .map(|s| s.parse().map_err(|_| ParserError::InvalidVertex))
+            .map(|s| {
+                s.parse().map_err(|err| {
+                    ParserError::with_message(
+                        ParserErrorKind::InvalidVertexPosition,
+                        line_index,
+                        format!("Failed to parse coordinate as number: ({})", err),
+                    )
+                })
+            })
             .collect::<Result<Vec<f32>, ParserError>>()?;
 
         Ok(Position::try_from(position_parts)?)
@@ -249,7 +280,7 @@ impl<'a> DocumentParser<'a> {
         let color_float = if self.options.color_format.is_float() {
             // directly parse as f32
             color_elems
-                .map(|s| s.parse::<f32>().map_err(|_| ParserError::InvalidVertex))
+                .map(|s| s.parse::<f32>().map_err(|err| ParserError::with_message(ParserErrorKind::InvalidColor, line_index, format!("Failed to parse color as float: {}", err))))
                 .collect::<Result<Vec<f32>, ParserError>>()
             // TODO: check size
         } else {
@@ -258,17 +289,17 @@ impl<'a> DocumentParser<'a> {
                 .map(|s| {
                     s.parse::<u8>()
                         .map(|val| val as f32)
-                        .map_err(|_| ParserError::InvalidVertex)
+                        .map_err(|err| ParserError::with_message(ParserErrorKind::InvalidColor, line_index, format!("Failed to parse color as u8: {}", err)))
                 })
                 .collect::<Result<Vec<f32>, ParserError>>()
             // TODO: check size
         }?;
-        Color::try_from(color_float).map_err(|_| ParserError::InvalidVertex)
+        Color::try_from(color_float).map_err(|err| ParserError::with_message(ParserErrorKind::InvalidColor, line_index, format!("Failed to parse color: {}", err)))
     }
 
     fn parse_faces(&mut self) -> ParserResult {
         for _ in 0..self.face_count {
-            let (line_index, line) = self.lines.next().ok_or_else(|| ParserError::InvalidFace)?;
+            let (line_index, line) = self.lines.next().ok_or_else(|| ParserError::with_message(ParserErrorKind::Missing, 0, "Expected face definition"))?;
             let mut parts: Vec<&str> = line.split_line();
 
             let face = self.parse_face(line_index, parts)?;
@@ -279,7 +310,15 @@ impl<'a> DocumentParser<'a> {
     }
 
     fn parse_face(&mut self, line_index: usize, mut parts: Vec<&str>) -> ParserResult<Face> {
-        let vertex_count: usize = parts[0].parse().map_err(|_| ParserError::InvalidFace)?;
+        if parts.len() < 4 {
+            return Err(ParserError::with_message(
+                ParserErrorKind::InvalidFace,
+                line_index,
+                format!("Not enough arguments. At least three vertex indicies required (e.g. `3 1 2 3`). {} arguments given", parts.len()),
+            ));
+        }
+
+        let vertex_count: usize = parts[0].parse().map_err(|err| ParserError::with_message(ParserErrorKind::InvalidFace, line_index, format!("Failed to parse vertex count for face definition: {}", err)))?;
         parts = parts[1..].to_vec();
 
         // // sanity check
@@ -315,7 +354,7 @@ impl<'a> DocumentParser<'a> {
         let vertices: Vec<usize> = parts
             .into_iter()
             .take(vertex_count)
-            .map(|s| s.parse().map_err(|_| ParserError::InvalidFace))
+            .map(|s| s.parse().map_err(|err| ParserError::with_message(ParserErrorKind::InvalidFace, line_index, format!("Failed to parse vertex index as number: ({})", err))))
             .collect::<Result<Vec<usize>, ParserError>>()?;
 
         Ok(vertices)
@@ -359,11 +398,11 @@ impl ConvertVec for Vec<&str> {
 }
 
 impl TryFrom<Vec<f32>> for Color {
-    type Error = GeometryError;
+    type Error = ParserError;
 
     fn try_from(value: Vec<f32>) -> Result<Self, Self::Error> {
         if 3 > value.len() || 4 < value.len() {
-            return Err(GeometryError::ColorOutOfBounds);
+            return Err(Self::Error::with_message(ParserErrorKind::InvalidColor, 0, format!("Invalid amount of arguments: {}", value.len())));
         }
 
         let alpha = if value.len() == 4 { value[3] } else { 1.0 };
@@ -378,11 +417,11 @@ impl TryFrom<Vec<f32>> for Color {
 }
 
 impl TryFrom<Vec<f32>> for Position {
-    type Error = GeometryError;
+    type Error = ParserError;
 
     fn try_from(value: Vec<f32>) -> Result<Self, Self::Error> {
         if value.len() != 3 {
-            return Err(GeometryError::VertexOutOfBounds);
+            return Err(Self::Error::with_message(ParserErrorKind::InvalidVertexPosition, 0, format!("Invalid amount of arguments: {}", value.len())));
         }
 
         Ok(Self {
@@ -403,6 +442,7 @@ mod tests {
     fn test_split_line() {
         assert_eq!("".split_line(), Vec::<&str>::new());
         assert_eq!("1 2 3".split_line(), vec!["1", "2", "3"]);
+        assert_eq!("1   2      3.0".split_line(), vec!["1", "2", "3"]);
     }
 
     // #[test]

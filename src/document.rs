@@ -2,17 +2,37 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
 use std::str::FromStr;
-use thiserror::Error;
 
 use crate::geometry::{ColorFormat, Face, Vertex};
 use crate::parser::{DocumentParser, ParserError};
 
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum DocumentError {
-    #[error("IO Error")]
-    IOError(#[from] io::Error),
-    #[error("Parser Error")]
-    ParserError(#[from] ParserError),
+    IOError(io::Error),
+    ParserError(ParserError),
+}
+
+impl std::error::Error for DocumentError { }
+
+impl std::fmt::Display for DocumentError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            DocumentError::IOError(e) => write!(f, "IO Error: {}", e),
+            DocumentError::ParserError(e) => write!(f, "Parser Error: {}", e),
+        }
+    }
+}
+
+impl From<io::Error> for DocumentError {
+    fn from(e: io::Error) -> Self {
+        DocumentError::IOError(e)
+    }
+}
+
+impl From<ParserError> for DocumentError {
+    fn from(e: ParserError) -> Self {
+        DocumentError::ParserError(e)
+    }
 }
 
 pub type DocumentResult<D = OffDocument> = Result<D, DocumentError>;
