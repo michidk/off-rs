@@ -1,7 +1,5 @@
-use off_rs::{
-    document::{OffDocument, ParserOptions},
-    geometry::{Color, ColorFormat, Face, Position, Vertex},
-};
+#[allow(unused_imports)]
+use off_rs::{document::*, geometry::*};
 
 #[test]
 fn spec_example() {
@@ -456,6 +454,7 @@ OFF
     )
     .unwrap();
 
+    println!("{:#?}", off);
     assert_eq!(
         off,
         OffDocument {
@@ -463,8 +462,8 @@ OFF
                 Vertex {
                     position: Position {
                         x: -0.5,
-                        y: 0.5,
-                        z: 12.0,
+                        y: -0.5,
+                        z: 0.5,
                     },
                     color: Some(Color {
                         r: 12.0,
@@ -475,9 +474,9 @@ OFF
                 },
                 Vertex {
                     position: Position {
-                        x: -0.5,
-                        y: 0.5,
-                        z: 34.0,
+                        x: 0.5,
+                        y: -0.5,
+                        z: 0.5,
                     },
                     color: Some(Color {
                         r: 34.0,
@@ -488,9 +487,9 @@ OFF
                 },
                 Vertex {
                     position: Position {
-                        x: 0.5,
+                        x: -0.5,
                         y: 0.5,
-                        z: 123.0,
+                        z: 0.5,
                     },
                     color: Some(Color {
                         r: 123.0,

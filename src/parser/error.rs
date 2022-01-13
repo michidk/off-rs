@@ -47,7 +47,7 @@ impl std::fmt::Display for ParserError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,
-            "{} @ ln:{}{}",
+            "{} in line {}{}",
             self.kind,
             self.line_index + 1,
             self.message

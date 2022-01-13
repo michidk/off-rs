@@ -1,4 +1,4 @@
-pub(crate) mod error;
+pub mod error;
 mod iter;
 mod utils;
 
@@ -133,7 +133,7 @@ impl<'a> DocumentParser<'a> {
         //     return Err(ParserError::InvalidVertex);
         // }
 
-        let position = self.parse_position(line_index, parts.clone()[1..=3].to_vec())?;
+        let position = self.parse_position(line_index, parts.clone()[0..=2].to_vec())?;
 
         let color = if parts.len() > 3 {
             Some(self.parse_color(line_index, parts[3..].to_vec())?)
@@ -259,7 +259,7 @@ impl<'a> DocumentParser<'a> {
         // }
         let vertices = self.parse_face_index(line_index, vertex_count, parts.clone())?;
 
-        let color = if parts.len() > 3 {
+        let color = if parts.len() > 4 {
             Some(self.parse_color(line_index, parts[4..].to_vec())?)
         } else {
             None

@@ -1,6 +1,6 @@
 pub mod document;
 pub mod geometry;
-pub(crate) mod parser;
+pub mod parser;
 
 // TODO: verify errors worxing
 // TODO: check visibility
