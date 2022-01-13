@@ -4,7 +4,8 @@ use std::path::Path;
 use std::str::FromStr;
 
 use crate::geometry::{ColorFormat, Face, Vertex};
-use crate::parser::{DocumentParser, ParserError};
+use crate::parser::error::ParserError;
+use crate::parser::DocumentParser;
 
 #[derive(Debug)]
 pub enum DocumentError {
@@ -12,7 +13,7 @@ pub enum DocumentError {
     ParserError(ParserError),
 }
 
-impl std::error::Error for DocumentError { }
+impl std::error::Error for DocumentError {}
 
 impl std::fmt::Display for DocumentError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {

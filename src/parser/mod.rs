@@ -1,126 +1,19 @@
-use std::{
-    borrow::Cow,
-    iter::{Enumerate, Peekable},
-    str::{FromStr, Lines},
-};
+pub(crate) mod error;
+mod iter;
+mod utils;
+
+use std::iter::Peekable;
 
 use crate::{
     document::{DocumentResult, OffDocument, ParserOptions},
     geometry::{Color, Face, Position, Vertex},
 };
 
-// line iterator by github.com/Shemnei
-#[derive(Debug, Clone)]
-pub struct OffLines<'a> {
-    lines: Enumerate<Lines<'a>>,
-}
-
-impl<'a> OffLines<'a> {
-    pub fn new(s: &'a str) -> Self {
-        Self {
-            lines: s.lines().enumerate(),
-        }
-    }
-}
-
-impl<'a> Iterator for OffLines<'a> {
-    type Item = (usize, &'a str);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        while let Some((line_index, mut line)) = self.lines.next() {
-            if let Some(comment_index) = line.find('#') {
-                line = &line[..comment_index];
-            }
-
-            // Trim after removing comments to prevent the following `Hello # World` => `Hello `
-            // (should be `Hello`)
-            line = line.trim();
-
-            if !line.is_empty() {
-                return Some((line_index, line));
-            }
-        }
-
-        None
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ParserError {
-    kind: ParserErrorKind,
-    line_index: usize,
-    message: Option<Cow<'static, str>>,
-}
-
-impl ParserError {
-    pub fn new(
-        kind: ParserErrorKind,
-        line_index: usize,
-        message: Option<Cow<'static, str>>,
-    ) -> Self {
-        Self {
-            kind,
-            line_index,
-            message,
-        }
-    }
-
-    pub fn with_message<M: Into<Cow<'static, str>>, O: Into<Option<M>>>(
-        kind: ParserErrorKind,
-        line_index: usize,
-        message: O,
-    ) -> Self {
-        Self {
-            kind,
-            line_index,
-            message: message.into().map(|inner| inner.into()),
-        }
-    }
-
-    pub fn without_message(kind: ParserErrorKind, line_index: usize) -> Self {
-        Self {
-            kind,
-            line_index,
-            message: None,
-        }
-    }
-}
-
-impl std::error::Error for ParserError { }
-
-impl std::fmt::Display for ParserError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(
-            f,
-            "{} @ ln:{}{}",
-            self.kind,
-            self.line_index + 1,
-            self.message
-                .as_ref()
-                .map(|msg| format!(" - {}", msg))
-                .unwrap_or_else(|| String::new())
-        )
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ParserErrorKind {
-    Empty,
-    Missing,
-    Invalid,
-    InvalidHeader,
-    InvalidCounts,
-    InvalidVertexPosition,
-    InvalidColor,
-    InvalidFace,
-    InvalidFaceIndex,
-}
-
-impl std::fmt::Display for ParserErrorKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        std::fmt::Debug::fmt(self, f)
-    }
-}
+use self::{
+    error::{ParserError, ParserErrorKind},
+    iter::OffLines,
+    utils::{ConvertVec, StrParts},
+};
 
 pub type ParserResult<T = ()> = Result<T, ParserError>;
 
@@ -183,18 +76,26 @@ impl<'a> DocumentParser<'a> {
             .ok_or_else(|| ParserError::without_message(ParserErrorKind::Missing, 0))?;
         let counts: Vec<&str> = line.split_line();
 
-        let num: Vec<usize> = counts
-            .into_iter()
-            .map(|s| {
-                s.parse().map_err(|err| {
-                    ParserError::with_message(
-                        ParserErrorKind::InvalidCounts,
-                        line_index,
-                        format!("Failed to parse count as number ({})", err),
-                    )
-                })
-            })
-            .collect::<Result<Vec<usize>, ParserError>>()?;
+        // let num: Vec<usize> = counts
+        //     .into_iter()
+        //     .map(|s| {
+        //         s.parse().map_err(|err| {
+        //             ParserError::with_message(
+        //                 ParserErrorKind::InvalidCounts,
+        //                 line_index,
+        //                 format!("Failed to parse count as number ({})", err),
+        //             )
+        //         })
+        //     })
+        //     .collect::<Result<Vec<usize>, ParserError>>()?;
+
+        let num: Vec<usize> = counts.convert_vec().map_err(|err| {
+            ParserError::with_message(
+                ParserErrorKind::InvalidCounts,
+                line_index,
+                format!("Failed to parse count as number ({})", err),
+            )
+        })?;
 
         // TODO: dont check that this element exist because we already have the code for that somewhere
         self.vertex_count = num[0];
@@ -280,27 +181,47 @@ impl<'a> DocumentParser<'a> {
         let color_float = if self.options.color_format.is_float() {
             // directly parse as f32
             color_elems
-                .map(|s| s.parse::<f32>().map_err(|err| ParserError::with_message(ParserErrorKind::InvalidColor, line_index, format!("Failed to parse color as float: {}", err))))
+                .map(|s| {
+                    s.parse::<f32>().map_err(|err| {
+                        ParserError::with_message(
+                            ParserErrorKind::InvalidColor,
+                            line_index,
+                            format!("Failed to parse color as float: {}", err),
+                        )
+                    })
+                })
                 .collect::<Result<Vec<f32>, ParserError>>()
             // TODO: check size
         } else {
             // parse as u8 and convert to f32
             color_elems
                 .map(|s| {
-                    s.parse::<u8>()
-                        .map(|val| val as f32)
-                        .map_err(|err| ParserError::with_message(ParserErrorKind::InvalidColor, line_index, format!("Failed to parse color as u8: {}", err)))
+                    s.parse::<u8>().map(|val| val as f32).map_err(|err| {
+                        ParserError::with_message(
+                            ParserErrorKind::InvalidColor,
+                            line_index,
+                            format!("Failed to parse color as u8: {}", err),
+                        )
+                    })
                 })
                 .collect::<Result<Vec<f32>, ParserError>>()
             // TODO: check size
         }?;
-        Color::try_from(color_float).map_err(|err| ParserError::with_message(ParserErrorKind::InvalidColor, line_index, format!("Failed to parse color: {}", err)))
+        Color::try_from(color_float).map_err(|err| {
+            ParserError::with_message(
+                ParserErrorKind::InvalidColor,
+                line_index,
+                format!("Failed to parse color: {}", err),
+            )
+        })
     }
 
     fn parse_faces(&mut self) -> ParserResult {
         for _ in 0..self.face_count {
-            let (line_index, line) = self.lines.next().ok_or_else(|| ParserError::with_message(ParserErrorKind::Missing, 0, "Expected face definition"))?;
-            let mut parts: Vec<&str> = line.split_line();
+            let (line_index, line) = self.lines.next().ok_or_else(|| {
+                ParserError::with_message(ParserErrorKind::Missing, 0, "Expected face definition")
+            })?;
+            let parts: Vec<&str> = line.split_line();
 
             let face = self.parse_face(line_index, parts)?;
             self.document.faces.push(face);
@@ -318,7 +239,13 @@ impl<'a> DocumentParser<'a> {
             ));
         }
 
-        let vertex_count: usize = parts[0].parse().map_err(|err| ParserError::with_message(ParserErrorKind::InvalidFace, line_index, format!("Failed to parse vertex count for face definition: {}", err)))?;
+        let vertex_count: usize = parts[0].parse().map_err(|err| {
+            ParserError::with_message(
+                ParserErrorKind::InvalidFace,
+                line_index,
+                format!("Failed to parse vertex count for face definition: {}", err),
+            )
+        })?;
         parts = parts[1..].to_vec();
 
         // // sanity check
@@ -354,7 +281,15 @@ impl<'a> DocumentParser<'a> {
         let vertices: Vec<usize> = parts
             .into_iter()
             .take(vertex_count)
-            .map(|s| s.parse().map_err(|err| ParserError::with_message(ParserErrorKind::InvalidFace, line_index, format!("Failed to parse vertex index as number: ({})", err))))
+            .map(|s| {
+                s.parse().map_err(|err| {
+                    ParserError::with_message(
+                        ParserErrorKind::InvalidFace,
+                        line_index,
+                        format!("Failed to parse vertex index as number: ({})", err),
+                    )
+                })
+            })
             .collect::<Result<Vec<usize>, ParserError>>()?;
 
         Ok(vertices)
@@ -365,44 +300,16 @@ impl<'a> DocumentParser<'a> {
     }
 }
 
-trait StrParts<'a> {
-    fn split_line(self) -> Vec<&'a str>;
-}
-
-impl<'a> StrParts<'a> for &'a str {
-    fn split_line(self) -> Vec<&'a str> {
-        self.split_whitespace()
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty())
-            .map_while(|s| (!s.starts_with("#")).then(|| s))
-            // .map_while(|s| (!s.starts_with("#")).then_some(s)); currently still unstable (https://github.com/rust-lang/rust/issues/80967)
-            .collect()
-    }
-}
-
-trait ConvertVec {
-    fn convert_vec<T, G>(self) -> Result<Vec<T>, G>
-    where
-        T: FromStr<Err = G>;
-}
-
-impl ConvertVec for Vec<&str> {
-    fn convert_vec<T, G>(self) -> Result<Vec<T>, G>
-    where
-        T: FromStr<Err = G>,
-    {
-        self.into_iter()
-            .map(FromStr::from_str)
-            .collect::<Result<Vec<T>, G>>()
-    }
-}
-
 impl TryFrom<Vec<f32>> for Color {
     type Error = ParserError;
 
     fn try_from(value: Vec<f32>) -> Result<Self, Self::Error> {
         if 3 > value.len() || 4 < value.len() {
-            return Err(Self::Error::with_message(ParserErrorKind::InvalidColor, 0, format!("Invalid amount of arguments: {}", value.len())));
+            return Err(Self::Error::with_message(
+                ParserErrorKind::InvalidColor,
+                0,
+                format!("Invalid amount of arguments: {}", value.len()),
+            ));
         }
 
         let alpha = if value.len() == 4 { value[3] } else { 1.0 };
@@ -421,7 +328,11 @@ impl TryFrom<Vec<f32>> for Position {
 
     fn try_from(value: Vec<f32>) -> Result<Self, Self::Error> {
         if value.len() != 3 {
-            return Err(Self::Error::with_message(ParserErrorKind::InvalidVertexPosition, 0, format!("Invalid amount of arguments: {}", value.len())));
+            return Err(Self::Error::with_message(
+                ParserErrorKind::InvalidVertexPosition,
+                0,
+                format!("Invalid amount of arguments: {}", value.len()),
+            ));
         }
 
         Ok(Self {
@@ -437,13 +348,6 @@ impl TryFrom<Vec<f32>> for Position {
 mod tests {
 
     use super::*;
-
-    #[test]
-    fn test_split_line() {
-        assert_eq!("".split_line(), Vec::<&str>::new());
-        assert_eq!("1 2 3".split_line(), vec!["1", "2", "3"]);
-        assert_eq!("1   2      3.0".split_line(), vec!["1", "2", "3"]);
-    }
 
     // #[test]
     // #[should_panic]
