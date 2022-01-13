@@ -2,12 +2,9 @@ pub mod document;
 pub mod geometry;
 pub(crate) mod parser;
 
-// TODO: integration tests
-// TODO: error handling
-// TODO: think about removing thiserror
+// TODO: verify errors worxing
 // TODO: cleanup
 // TODO: verify actual counts with header counts
-// TODO: unit tests
 
 #[cfg(test)]
 mod tests {

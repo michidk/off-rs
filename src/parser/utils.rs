@@ -33,11 +33,10 @@ impl ConvertVec for Vec<&str> {
 }
 
 #[cfg(test)]
-#[allow(unused)]
 mod tests {
 
     use super::*;
-    use std::num::{IntErrorKind, ParseIntError};
+    use std::num::IntErrorKind;
 
     #[test]
     fn test_split_line() {
@@ -56,10 +55,7 @@ mod tests {
             vec!["1", "2", "3"].convert_vec::<u8, _>(),
             Ok(vec![1u8, 2u8, 3u8])
         );
-        assert!(matches!(
-            vec!["1", "2", "3.0"].convert_vec::<u8, _>(),
-            Err(_)
-        ));
+        assert_eq!(vec!["1", "2", "3.0"].convert_vec::<u8, _>().unwrap_err().kind(), &IntErrorKind::InvalidDigit);
     }
 
     #[test]

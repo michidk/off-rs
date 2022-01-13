@@ -1,6 +1,6 @@
 use off_rs::{
     document::{OffDocument, ParserOptions},
-    geometry::{ColorFormat, Face, Position, Vertex},
+    geometry::{Color, ColorFormat, Face, Position, Vertex},
 };
 
 #[test]
@@ -29,7 +29,133 @@ OFF
   4  6 5 4 7  0.000 1.000 0.000 0.75
 "#;
     let off = content.parse::<OffDocument>().unwrap();
-    println!("{:#?}", off);
+    assert_eq!(
+        off,
+        OffDocument {
+            vertices: vec![
+                Vertex {
+                    position: Position {
+                        x: 1.632993,
+                        y: 0.0,
+                        z: 1.154701,
+                    },
+                    color: None,
+                },
+                Vertex {
+                    position: Position {
+                        x: 0.0,
+                        y: 1.632993,
+                        z: 1.154701,
+                    },
+                    color: None,
+                },
+                Vertex {
+                    position: Position {
+                        x: -1.632993,
+                        y: 0.0,
+                        z: 1.154701,
+                    },
+                    color: None,
+                },
+                Vertex {
+                    position: Position {
+                        x: 0.0,
+                        y: -1.632993,
+                        z: 1.154701,
+                    },
+                    color: None,
+                },
+                Vertex {
+                    position: Position {
+                        x: 1.632993,
+                        y: 0.0,
+                        z: -1.154701,
+                    },
+                    color: None,
+                },
+                Vertex {
+                    position: Position {
+                        x: 0.0,
+                        y: 1.632993,
+                        z: -1.154701,
+                    },
+                    color: None,
+                },
+                Vertex {
+                    position: Position {
+                        x: -1.632993,
+                        y: 0.0,
+                        z: -1.154701,
+                    },
+                    color: None,
+                },
+                Vertex {
+                    position: Position {
+                        x: 0.0,
+                        y: -1.632993,
+                        z: -1.154701,
+                    },
+                    color: None,
+                },
+            ],
+            faces: vec![
+                Face {
+                    vertices: vec![0, 1, 2, 3,],
+                    color: Some(Color {
+                        r: 1.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 0.75,
+                    },),
+                },
+                Face {
+                    vertices: vec![7, 4, 0, 3,],
+                    color: Some(Color {
+                        r: 0.3,
+                        g: 0.4,
+                        b: 0.0,
+                        a: 0.75,
+                    },),
+                },
+                Face {
+                    vertices: vec![4, 5, 1, 0,],
+                    color: Some(Color {
+                        r: 0.2,
+                        g: 0.5,
+                        b: 0.1,
+                        a: 0.75,
+                    },),
+                },
+                Face {
+                    vertices: vec![5, 6, 2, 1,],
+                    color: Some(Color {
+                        r: 0.1,
+                        g: 0.6,
+                        b: 0.2,
+                        a: 0.75,
+                    },),
+                },
+                Face {
+                    vertices: vec![3, 2, 6, 7,],
+                    color: Some(Color {
+                        r: 0.0,
+                        g: 0.7,
+                        b: 0.3,
+                        a: 0.75,
+                    },),
+                },
+                Face {
+                    vertices: vec![6, 5, 4, 7,],
+                    color: Some(Color {
+                        r: 0.0,
+                        g: 1.0,
+                        b: 0.0,
+                        a: 0.75,
+                    },),
+                },
+            ],
+        }
+    );
 }
 
 #[test]
@@ -59,8 +185,134 @@ OFF
         color_format: ColorFormat::RGBAInteger,
         ..Default::default()
     };
-    let off = OffDocument::parse(content, options);
-    println!("{:#?}", off);
+    let off = OffDocument::parse(content, options).unwrap();
+    assert_eq!(
+        off,
+        OffDocument {
+            vertices: vec![
+                Vertex {
+                    position: Position {
+                        x: 1.0,
+                        y: 0.0,
+                        z: 1.4142,
+                    },
+                    color: None,
+                },
+                Vertex {
+                    position: Position {
+                        x: 0.0,
+                        y: 1.0,
+                        z: 1.4142,
+                    },
+                    color: None,
+                },
+                Vertex {
+                    position: Position {
+                        x: -1.0,
+                        y: 0.0,
+                        z: 1.4142,
+                    },
+                    color: None,
+                },
+                Vertex {
+                    position: Position {
+                        x: 0.0,
+                        y: -1.0,
+                        z: 1.4142,
+                    },
+                    color: None,
+                },
+                Vertex {
+                    position: Position {
+                        x: 1.0,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                    color: None,
+                },
+                Vertex {
+                    position: Position {
+                        x: 0.0,
+                        y: 1.0,
+                        z: 0.0,
+                    },
+                    color: None,
+                },
+                Vertex {
+                    position: Position {
+                        x: -1.0,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                    color: None,
+                },
+                Vertex {
+                    position: Position {
+                        x: 0.0,
+                        y: -1.0,
+                        z: 0.0,
+                    },
+                    color: None,
+                },
+            ],
+            faces: vec![
+                Face {
+                    vertices: vec![0, 1, 2, 3,],
+                    color: Some(Color {
+                        r: 255.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 1.0,
+                    },),
+                },
+                Face {
+                    vertices: vec![7, 4, 0, 3,],
+                    color: Some(Color {
+                        r: 0.0,
+                        g: 255.0,
+                        b: 0.0,
+                        a: 1.0,
+                    },),
+                },
+                Face {
+                    vertices: vec![4, 5, 1, 0,],
+                    color: Some(Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 255.0,
+                        a: 1.0,
+                    },),
+                },
+                Face {
+                    vertices: vec![5, 6, 2, 1,],
+                    color: Some(Color {
+                        r: 0.0,
+                        g: 255.0,
+                        b: 0.0,
+                        a: 1.0,
+                    },),
+                },
+                Face {
+                    vertices: vec![3, 2, 6, 7,],
+                    color: Some(Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 255.0,
+                        a: 1.0,
+                    },),
+                },
+                Face {
+                    vertices: vec![6, 5, 4, 7,],
+                    color: Some(Color {
+                        r: 255.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 1.0,
+                    },),
+                },
+            ],
+        }
+    );
 }
 
 #[test]
@@ -84,9 +336,9 @@ OFF
 4 6 0 2 4
 "#;
 
-    let off = content.parse::<OffDocument>();
+    let off = content.parse::<OffDocument>().unwrap();
     assert_eq!(
-        off.unwrap(),
+        off,
         OffDocument {
             vertices: vec![
                 Vertex {

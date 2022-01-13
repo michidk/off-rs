@@ -35,3 +35,25 @@ impl<'a> Iterator for OffLines<'a> {
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_iterator() {
+        let str = r#"this
+        is
+        a
+        test
+        "#;
+
+        let mut lines = OffLines::new(str.as_ref()).peekable();
+        assert_eq!(lines.next(), Some((0, "this")));
+        assert_eq!(lines.next(), Some((1, "is")));
+        assert_eq!(lines.next(), Some((2, "a")));
+        assert_eq!(lines.next(), Some((3, "test")));
+        assert_eq!(lines.next(), None);
+    }
+}
