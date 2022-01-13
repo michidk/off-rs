@@ -18,7 +18,7 @@ impl<'a> Iterator for OffLines<'a> {
     type Item = (usize, &'a str);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some((line_index, mut line)) = self.lines.next() {
+        for (line_index, mut line) in self.lines.by_ref() {
             if let Some(comment_index) = line.find('#') {
                 line = &line[..comment_index];
             }
@@ -42,7 +42,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_iterator() {
+    fn iterator() {
         let str = r#"this
         is
         a

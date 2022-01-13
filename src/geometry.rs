@@ -27,10 +27,7 @@ pub enum ColorFormat {
 
 impl ColorFormat {
     pub fn is_float(&self) -> bool {
-        match self {
-            ColorFormat::RGBFloat | ColorFormat::RGBAFloat => true,
-            _ => false,
-        }
+        matches!(self, ColorFormat::RGBFloat | ColorFormat::RGBAFloat)
     }
 
     pub fn is_integer(&self) -> bool {
@@ -38,10 +35,7 @@ impl ColorFormat {
     }
 
     pub fn has_alpha(&self) -> bool {
-        match self {
-            ColorFormat::RGBAFloat | ColorFormat::RGBAInteger => true,
-            _ => false,
-        }
+        matches!(self, ColorFormat::RGBAFloat | ColorFormat::RGBAInteger)
     }
 
     pub fn element_count(&self) -> usize {

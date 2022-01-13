@@ -133,10 +133,10 @@ impl<'a> DocumentParser<'a> {
         //     return Err(ParserError::InvalidVertex);
         // }
 
-        let position = self.parse_position(line_index, parts.clone())?;
+        let position = self.parse_position(line_index, parts.clone()[1..=3].to_vec())?;
 
         let color = if parts.len() > 3 {
-            Some(self.parse_color(line_index, parts[4..].to_vec())?)
+            Some(self.parse_color(line_index, parts[3..].to_vec())?)
         } else {
             None
         };
@@ -170,7 +170,7 @@ impl<'a> DocumentParser<'a> {
             })
             .collect::<Result<Vec<f32>, ParserError>>()?;
 
-        Ok(Position::try_from(position_parts)?)
+        Position::try_from(position_parts)
     }
 
     fn parse_color(&mut self, line_index: usize, parts: Vec<&str>) -> ParserResult<Color> {
@@ -308,7 +308,10 @@ impl TryFrom<Vec<f32>> for Color {
             return Err(Self::Error::with_message(
                 ParserErrorKind::InvalidColor,
                 0,
-                format!("Invalid amount of arguments: {}", value.len()),
+                format!(
+                    "Invalid amount of arguments (expected: 3-4, actual: {})",
+                    value.len()
+                ),
             ));
         }
 
@@ -331,7 +334,10 @@ impl TryFrom<Vec<f32>> for Position {
             return Err(Self::Error::with_message(
                 ParserErrorKind::InvalidVertexPosition,
                 0,
-                format!("Invalid amount of arguments: {}", value.len()),
+                format!(
+                    "Invalid amount of arguments (expected: 3, actual: {})",
+                    value.len()
+                ),
             ));
         }
 

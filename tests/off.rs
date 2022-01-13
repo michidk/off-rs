@@ -435,3 +435,75 @@ OFF
         }
     );
 }
+
+#[test]
+fn vertex_colors() {
+    let content = r#"
+OFF
+3 1 0
+-0.500000 -0.500000 0.500000 12 122 210
+0.500000 -0.500000 0.500000 34 23 112
+-0.500000 0.500000 0.500000 123 12 44
+3 0 1 2
+"#;
+
+    let off = OffDocument::parse(
+        content,
+        ParserOptions {
+            color_format: ColorFormat::RGBInteger,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+
+    assert_eq!(
+        off,
+        OffDocument {
+            vertices: vec![
+                Vertex {
+                    position: Position {
+                        x: -0.5,
+                        y: 0.5,
+                        z: 12.0,
+                    },
+                    color: Some(Color {
+                        r: 12.0,
+                        g: 122.0,
+                        b: 210.0,
+                        a: 1.0,
+                    },),
+                },
+                Vertex {
+                    position: Position {
+                        x: -0.5,
+                        y: 0.5,
+                        z: 34.0,
+                    },
+                    color: Some(Color {
+                        r: 34.0,
+                        g: 23.0,
+                        b: 112.0,
+                        a: 1.0,
+                    },),
+                },
+                Vertex {
+                    position: Position {
+                        x: 0.5,
+                        y: 0.5,
+                        z: 123.0,
+                    },
+                    color: Some(Color {
+                        r: 123.0,
+                        g: 12.0,
+                        b: 44.0,
+                        a: 1.0,
+                    },),
+                },
+            ],
+            faces: vec![Face {
+                vertices: vec![0, 1, 2,],
+                color: None,
+            },],
+        }
+    )
+}

@@ -38,17 +38,9 @@ impl From<ParserError> for DocumentError {
 
 pub type DocumentResult<D = OffDocument> = Result<D, DocumentError>;
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct ParserOptions {
     pub color_format: ColorFormat,
-}
-
-impl Default for ParserOptions {
-    fn default() -> Self {
-        Self {
-            color_format: Default::default(),
-        }
-    }
 }
 
 #[derive(Clone, PartialEq, Debug)]

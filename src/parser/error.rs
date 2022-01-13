@@ -53,7 +53,7 @@ impl std::fmt::Display for ParserError {
             self.message
                 .as_ref()
                 .map(|msg| format!(" - {}", msg))
-                .unwrap_or_else(|| String::new())
+                .unwrap_or_else(String::new)
         )
     }
 }
