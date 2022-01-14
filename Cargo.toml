@@ -13,3 +13,10 @@ homepage = "https://github.com/michidk/off_rs"
 [lib]
 name = "off_rs"
 path = "src/lib.rs"
+
+[[bench]]
+name = "parse"
+harness = false
+
+[dev-dependencies]
+criterion = "0.3.5"
