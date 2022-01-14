@@ -25,19 +25,11 @@ impl ParserError {
         line_index: usize,
         message: O,
     ) -> Self {
-        Self {
-            kind,
-            line_index,
-            message: message.into().map(|inner| inner.into()),
-        }
+        Self::new(kind, line_index, message.into().map(|inner| inner.into()))
     }
 
     pub fn without_message(kind: ParserErrorKind, line_index: usize) -> Self {
-        Self {
-            kind,
-            line_index,
-            message: None,
-        }
+        Self::new(kind, line_index, None)
     }
 }
 

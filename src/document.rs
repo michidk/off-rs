@@ -43,7 +43,7 @@ pub struct ParserOptions {
     pub color_format: ColorFormat,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Default, Clone, PartialEq, Debug)]
 pub struct OffDocument {
     pub vertices: Vec<Vertex>,
     pub faces: Vec<Face>,
@@ -51,19 +51,11 @@ pub struct OffDocument {
 
 impl OffDocument {
     pub(crate) fn new() -> Self {
-        Self {
-            vertices: Vec::new(),
-            faces: Vec::new(),
-        }
+        Default::default()
     }
 
     pub fn from_path(path: &Path, options: ParserOptions) -> DocumentResult {
-        let file_result = File::open(path);
-
-        let mut file = match file_result {
-            Ok(file) => file,
-            Err(inner) => return Err(DocumentError::IOError(inner)),
-        };
+        let mut file = File::open(path).map_err(DocumentError::IOError)?;
 
         let mut string = String::new();
         match file.read_to_string(&mut string) {
@@ -96,11 +88,5 @@ impl FromStr for OffDocument {
 
     fn from_str(string: &str) -> DocumentResult {
         Self::parse(string, Default::default())
-    }
-}
-
-impl Default for OffDocument {
-    fn default() -> Self {
-        Self::new()
     }
 }

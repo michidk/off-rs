@@ -26,7 +26,13 @@ OFF
   4  3 2 6 7  0.000 0.700 0.300 0.75
   4  6 5 4 7  0.000 1.000 0.000 0.75
 "#;
-    let off = content.parse::<OffDocument>().unwrap();
+
+    let options = ParserOptions {
+        color_format: ColorFormat::RGBAFloat,
+        ..Default::default()
+    };
+    let off = OffDocument::parse(content, options).unwrap();
+
     assert_eq!(
         off,
         OffDocument {
@@ -179,11 +185,13 @@ OFF
 4  3 2 6 7  0 0 255
 4  6 5 4 7  255 0 0
 "#;
+
     let options = ParserOptions {
-        color_format: ColorFormat::RGBAInteger,
+        color_format: ColorFormat::RGBInteger,
         ..Default::default()
     };
     let off = OffDocument::parse(content, options).unwrap();
+
     assert_eq!(
         off,
         OffDocument {

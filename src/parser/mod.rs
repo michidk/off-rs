@@ -2,8 +2,6 @@ pub mod error;
 mod iter;
 mod utils;
 
-use std::iter::Peekable;
-
 use crate::{
     document::{DocumentResult, OffDocument, ParserOptions},
     geometry::{Color, Face, Position, Vertex},
@@ -19,7 +17,8 @@ pub type ParserResult<T = ()> = Result<T, ParserError>;
 
 #[derive(Debug, Clone)]
 pub struct DocumentParser<'a> {
-    lines: Peekable<OffLines<'a>>,
+    lines: OffLines<'a>,
+    prev_line_index: usize,
     vertex_count: usize,
     face_count: usize,
     edge_count: usize,
@@ -29,10 +28,11 @@ pub struct DocumentParser<'a> {
 
 impl<'a> DocumentParser<'a> {
     pub fn new<S: AsRef<str>>(s: &'a S, options: ParserOptions) -> Self {
-        let lines = OffLines::new(s.as_ref()).peekable();
+        let lines = OffLines::new(s.as_ref());
 
         DocumentParser {
             lines,
+            prev_line_index: 0,
             vertex_count: 0,
             face_count: 0,
             edge_count: 0,
@@ -52,10 +52,17 @@ impl<'a> DocumentParser<'a> {
         self.finalize()
     }
 
+    fn next_line(&mut self) -> Option<(usize, &'a str)> {
+        let (line_index, line) = self.lines.next()?;
+
+        self.prev_line_index = line_index;
+
+        Some((line_index, line))
+    }
+
     fn parse_header(&mut self) -> ParserResult {
         let (line_index, line) = self
-            .lines
-            .next()
+            .next_line()
             .ok_or_else(|| ParserError::without_message(ParserErrorKind::Empty, 0))?;
 
         if line != "OFF" {
@@ -70,10 +77,14 @@ impl<'a> DocumentParser<'a> {
     }
 
     fn parse_counts(&mut self) -> ParserResult {
-        let (line_index, line) = self
-            .lines
-            .next()
-            .ok_or_else(|| ParserError::without_message(ParserErrorKind::Missing, 0))?;
+        let (line_index, line) = self.next_line().ok_or_else(|| {
+            ParserError::with_message(
+                ParserErrorKind::Missing,
+                self.prev_line_index + 1,
+                "No counts present",
+            )
+        })?;
+
         let counts: Vec<&str> = line.split_line();
 
         // let num: Vec<usize> = counts
@@ -98,7 +109,16 @@ impl<'a> DocumentParser<'a> {
         })?;
 
         // TODO: dont check that this element exist because we already have the code for that somewhere
-        self.vertex_count = num[0];
+        // CHECK: Theoretically we check with`self.next_line` as it wont return an empty line
+        // but just for sanity i would keep this check in
+        self.vertex_count = *num.get(0).ok_or_else(|| {
+            ParserError::with_message(
+                ParserErrorKind::InvalidCounts,
+                line_index,
+                "No vertex count present",
+            )
+        })?;
+
         match num[1..] {
             [face_count, edge_count, ..] => {
                 self.face_count = face_count;
@@ -107,7 +127,13 @@ impl<'a> DocumentParser<'a> {
             [face_count] => {
                 self.face_count = face_count;
             }
-            [] => {}
+            [] => {
+                return Err(ParserError::with_message(
+                    ParserErrorKind::InvalidCounts,
+                    line_index,
+                    "No face count present",
+                ));
+            }
         }
 
         Ok(())
@@ -115,8 +141,12 @@ impl<'a> DocumentParser<'a> {
 
     fn parse_vertices(&mut self) -> ParserResult {
         for _ in 0..self.vertex_count {
-            let (line_index, line) = self.lines.next().ok_or_else(|| {
-                ParserError::with_message(ParserErrorKind::Missing, 0, "Expected vertex definition")
+            let (line_index, line) = self.next_line().ok_or_else(|| {
+                ParserError::with_message(
+                    ParserErrorKind::Missing,
+                    self.prev_line_index + 1,
+                    "Expected vertex definition",
+                )
             })?;
 
             let parts = line.split_line();
@@ -133,10 +163,10 @@ impl<'a> DocumentParser<'a> {
         //     return Err(ParserError::InvalidVertex);
         // }
 
-        let position = self.parse_position(line_index, parts.clone()[0..=2].to_vec())?;
+        let position = self.parse_position(line_index, &parts[0..=2])?;
 
         let color = if parts.len() > 3 {
-            Some(self.parse_color(line_index, parts[3..].to_vec())?)
+            Some(self.parse_color(line_index, &parts[3..])?)
         } else {
             None
         };
@@ -144,7 +174,7 @@ impl<'a> DocumentParser<'a> {
         Ok(Vertex { position, color })
     }
 
-    fn parse_position(&mut self, line_index: usize, parts: Vec<&str>) -> ParserResult<Position> {
+    fn parse_position(&mut self, line_index: usize, parts: &[&str]) -> ParserResult<Position> {
         if parts.len() != 3 {
             return Err(ParserError::with_message(
                 ParserErrorKind::InvalidVertexPosition,
@@ -157,8 +187,7 @@ impl<'a> DocumentParser<'a> {
         }
 
         let position_parts: Vec<f32> = parts
-            .into_iter()
-            .take(3)
+            .iter()
             .map(|s| {
                 s.parse().map_err(|err| {
                     ParserError::with_message(
@@ -170,17 +199,27 @@ impl<'a> DocumentParser<'a> {
             })
             .collect::<Result<Vec<f32>, ParserError>>()?;
 
+        // TODO: should not be try_from as we check for validity above?
         Position::try_from(position_parts)
     }
 
-    fn parse_color(&mut self, line_index: usize, parts: Vec<&str>) -> ParserResult<Color> {
-        let color_elems = parts
-            .into_iter()
-            .take(self.options.color_format.element_count());
+    fn parse_color(&mut self, line_index: usize, parts: &[&str]) -> ParserResult<Color> {
+        if parts.len() != self.options.color_format.element_count() {
+            return Err(ParserError::with_message(
+                ParserErrorKind::InvalidColor,
+                line_index,
+                format!(
+                    "Invalid number of color elements given (expected: {}, actual: {})",
+                    self.options.color_format.element_count(),
+                    parts.len()
+                ),
+            ));
+        }
 
         let color_float = if self.options.color_format.is_float() {
             // directly parse as f32
-            color_elems
+            parts
+                .iter()
                 .map(|s| {
                     s.parse::<f32>().map_err(|err| {
                         ParserError::with_message(
@@ -191,10 +230,10 @@ impl<'a> DocumentParser<'a> {
                     })
                 })
                 .collect::<Result<Vec<f32>, ParserError>>()
-            // TODO: check size
         } else {
             // parse as u8 and convert to f32
-            color_elems
+            parts
+                .iter()
                 .map(|s| {
                     s.parse::<u8>().map(|val| val as f32).map_err(|err| {
                         ParserError::with_message(
@@ -205,8 +244,8 @@ impl<'a> DocumentParser<'a> {
                     })
                 })
                 .collect::<Result<Vec<f32>, ParserError>>()
-            // TODO: check size
         }?;
+
         Color::try_from(color_float).map_err(|err| {
             ParserError::with_message(
                 ParserErrorKind::InvalidColor,
@@ -218,19 +257,23 @@ impl<'a> DocumentParser<'a> {
 
     fn parse_faces(&mut self) -> ParserResult {
         for _ in 0..self.face_count {
-            let (line_index, line) = self.lines.next().ok_or_else(|| {
-                ParserError::with_message(ParserErrorKind::Missing, 0, "Expected face definition")
+            let (line_index, line) = self.next_line().ok_or_else(|| {
+                ParserError::with_message(
+                    ParserErrorKind::Missing,
+                    self.prev_line_index + 1,
+                    "Expected face definition",
+                )
             })?;
-            let parts: Vec<&str> = line.split_line();
 
-            let face = self.parse_face(line_index, parts)?;
+            let parts: Vec<&str> = line.split_line();
+            let face = self.parse_face(line_index, &parts)?;
             self.document.faces.push(face);
         }
 
         Ok(())
     }
 
-    fn parse_face(&mut self, line_index: usize, mut parts: Vec<&str>) -> ParserResult<Face> {
+    fn parse_face(&mut self, line_index: usize, mut parts: &[&str]) -> ParserResult<Face> {
         if parts.len() < 4 {
             return Err(ParserError::with_message(
                 ParserErrorKind::InvalidFace,
@@ -246,7 +289,9 @@ impl<'a> DocumentParser<'a> {
                 format!("Failed to parse vertex count for face definition: {}", err),
             )
         })?;
-        parts = parts[1..].to_vec();
+
+        // "Consume" vertex_count
+        parts = &parts[1..];
 
         // // sanity check
         // if face_str.len() != vertex_count as usize {
@@ -257,13 +302,17 @@ impl<'a> DocumentParser<'a> {
         // if vertex_count < 3 {
         //     return Err(ParserError::InvalidFace);
         // }
-        let vertices = self.parse_face_index(line_index, vertex_count, parts.clone())?;
+        let vertices = self.parse_face_index(line_index, vertex_count, parts)?;
 
-        let color = if parts.len() > 4 {
-            Some(self.parse_color(line_index, parts[4..].to_vec())?)
+        // "Consume" vertex indexes
+        parts = &parts[vertex_count..];
+
+        let color = if !parts.is_empty() {
+            Some(self.parse_color(line_index, parts)?)
         } else {
             None
         };
+
         Ok(Face { vertices, color })
     }
 
@@ -271,7 +320,7 @@ impl<'a> DocumentParser<'a> {
         &mut self,
         line_index: usize,
         vertex_count: usize,
-        parts: Vec<&str>,
+        parts: &[&str],
     ) -> ParserResult<Vec<usize>> {
         // TODO: dont work if we have colors
         // if vertex_str.len() != 3 {
@@ -279,7 +328,7 @@ impl<'a> DocumentParser<'a> {
         // }
 
         let vertices: Vec<usize> = parts
-            .into_iter()
+            .iter()
             .take(vertex_count)
             .map(|s| {
                 s.parse().map_err(|err| {
@@ -291,6 +340,18 @@ impl<'a> DocumentParser<'a> {
                 })
             })
             .collect::<Result<Vec<usize>, ParserError>>()?;
+
+        if vertices.len() != vertex_count {
+            return Err(ParserError::with_message(
+                ParserErrorKind::InvalidFaceIndex,
+                line_index,
+                format!(
+                    "Invalid number of face indexes given (expected: {}, actual: {})",
+                    vertex_count,
+                    vertices.len()
+                ),
+            ));
+        }
 
         Ok(vertices)
     }
