@@ -7,8 +7,6 @@ pub(crate) trait StrParts<'a> {
 impl<'a> StrParts<'a> for &'a str {
     fn split_line(self) -> Vec<&'a str> {
         self.split_whitespace()
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty())
             .map_while(|s| (!s.starts_with('#')).then(|| s))
             // .map_while(|s| (!s.starts_with('#')).then_some(s)); currently still unstable (https://github.com/rust-lang/rust/issues/80967)
             .collect()
@@ -34,7 +32,6 @@ impl ConvertVec for Vec<&str> {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
     use std::num::IntErrorKind;
 

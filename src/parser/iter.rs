@@ -38,7 +38,6 @@ impl<'a> Iterator for OffLines<'a> {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]
