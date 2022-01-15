@@ -54,6 +54,7 @@ impl std::fmt::Display for ParserError {
 pub enum ParserErrorKind {
     Empty,
     Missing,
+    LimitExceeded,
     Invalid,
     InvalidHeader,
     InvalidCounts,

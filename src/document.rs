@@ -38,9 +38,27 @@ impl From<ParserError> for DocumentError {
 
 pub type DocumentResult<D = OffDocument> = Result<D, DocumentError>;
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct Limits {
+    pub vertex_count: usize,
+    pub face_count: usize,
+    pub face_vertex_count: usize,
+}
+
+impl Default for Limits {
+    fn default() -> Self {
+        Self {
+            vertex_count: 2048,
+            face_count: 4096,
+            face_vertex_count: 64,
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct ParserOptions {
     pub color_format: ColorFormat,
+    pub limits: Limits,
 }
 
 #[derive(Default, Clone, PartialEq, Debug)]

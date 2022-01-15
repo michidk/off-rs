@@ -10,6 +10,7 @@ fuzz_target!(|data: &[u8]| {
             &s,
             ParserOptions {
                 color_format: ColorFormat::RGBAFloat,
+                ..Default::default()
             },
         )
         .parse();
