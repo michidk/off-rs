@@ -1,10 +1,5 @@
 #[allow(unused_imports)]
-use off_rs::{
-    document::*,
-    geometry::*,
-    parser::*,
-    parser::error::*,
-};
+use off_rs::{document::*, geometry::*, parser::error::*, parser::*};
 
 #[test]
 fn missing_vertex_color() {
@@ -24,5 +19,13 @@ OFF
             ..Default::default()
         },
     );
-    assert!(matches!(off.unwrap_err(), DocumentError::ParserError(ParserError { kind: ParserErrorKind::InvalidColor, line_index: 4, message: _ })));
+
+    assert!(matches!(
+        off.unwrap_err(),
+        DocumentError::ParserError(ParserError {
+            kind: ParserErrorKind::InvalidColor,
+            line_index: 4,
+            message: _
+        })
+    ));
 }

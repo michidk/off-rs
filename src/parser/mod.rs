@@ -108,32 +108,49 @@ impl<'a> DocumentParser<'a> {
             )
         })?;
 
-        // TODO: dont check that this element exist because we already have the code for that somewhere
-        // CHECK: Theoretically we check with`self.next_line` as it wont return an empty line
-        // but just for sanity i would keep this check in
-        self.vertex_count = *num.get(0).ok_or_else(|| {
-            ParserError::with_message(
-                ParserErrorKind::InvalidCounts,
-                line_index,
-                "No vertex count present",
-            )
-        })?;
-
-        match num[1..] {
-            [face_count, edge_count, ..] => {
+        match num[..] {
+            [vertex_count, face_count, edge_count] => {
+                self.vertex_count = vertex_count;
                 self.face_count = face_count;
                 self.edge_count = edge_count;
             }
-            [face_count] => {
+            [vertex_count, face_count] => {
+                self.vertex_count = vertex_count;
                 self.face_count = face_count;
             }
-            [] => {
+            _ => {
                 return Err(ParserError::with_message(
                     ParserErrorKind::InvalidCounts,
                     line_index,
-                    "No face count present",
+                    format!(
+                        "Invalid amount of counts present (expected: 2-3, actual: {})",
+                        num.len()
+                    ),
                 ));
             }
+        }
+
+        // Check for limits
+        if self.vertex_count > self.options.limits.vertex_count {
+            return Err(ParserError::with_message(
+                ParserErrorKind::LimitExceeded,
+                line_index,
+                format!(
+                    "Vertext count exceeds limit (limit: {}, actual: {})",
+                    self.options.limits.vertex_count, self.vertex_count
+                ),
+            ));
+        }
+
+        if self.face_count > self.options.limits.face_count {
+            return Err(ParserError::with_message(
+                ParserErrorKind::LimitExceeded,
+                line_index,
+                format!(
+                    "Face count exceeds limit (limit: {}, actual: {})",
+                    self.options.limits.face_count, self.face_count
+                ),
+            ));
         }
 
         Ok(())
@@ -162,6 +179,17 @@ impl<'a> DocumentParser<'a> {
         // if vertex_str.len() != 3 {
         //     return Err(ParserError::InvalidVertex);
         // }
+
+        if parts.len() < 3 {
+            return Err(ParserError::with_message(
+                ParserErrorKind::InvalidVertexPosition,
+                line_index,
+                format!(
+                    "Not enough parts for position (expected: >= 3, actual: {})",
+                    parts.len()
+                ),
+            ));
+        }
 
         let position = self.parse_position(line_index, &parts[0..=2])?;
 
@@ -289,6 +317,17 @@ impl<'a> DocumentParser<'a> {
                 format!("Failed to parse vertex count for face definition: {}", err),
             )
         })?;
+
+        if vertex_count > self.options.limits.face_vertex_count {
+            return Err(ParserError::with_message(
+                ParserErrorKind::LimitExceeded,
+                line_index,
+                format!(
+                    "Vertex count of face exceeds limit (limit: {}, actual: {})",
+                    self.options.limits.face_vertex_count, vertex_count
+                ),
+            ));
+        }
 
         // "Consume" vertex_count
         parts = &parts[1..];
