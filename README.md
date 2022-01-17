@@ -1,5 +1,6 @@
-off-rs
-===
+# off-rs
+
+[![MIT License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](https://choosealicense.com/licenses/mit/) [![Continuous integration](https://img.shields.io/github/workflow/status/michidk/off-rs/Continuous%20Integration?style=for-the-badge)](https://github.com/michidk/off-rs/actions) [![Crates.io](https://img.shields.io/crates/v/off-rs?style=for-the-badge)](https://crates.io/crates/spirv-layout)
 
 Parses `.off` files ([Object File Format](https://en.wikipedia.org/wiki/OFF_(file_format))).
 This implementation follows the spec from the Princeton Shape Benchmark [the spec](https://people.sc.fsu.edu/~jburkardt/data/off/off.html)
