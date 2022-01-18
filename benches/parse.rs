@@ -51,6 +51,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("parse wiki - off-rs", |b| {
         let opts = ParserOptions {
             color_format: ColorFormat::RGBAFloat,
+            ..Default::default()
         };
 
         b.iter(|| black_box(DocumentParser::new(&WIKI_OFF, opts).parse()))
@@ -59,6 +60,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("parse prinston - off-rs", |b| {
         let opts = ParserOptions {
             color_format: ColorFormat::RGBAFloat,
+            ..Default::default()
         };
 
         b.iter(|| black_box(DocumentParser::new(&PRINSTON_OFF, opts).parse()))
