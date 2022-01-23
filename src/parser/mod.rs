@@ -175,11 +175,6 @@ impl<'a> DocumentParser<'a> {
     }
 
     fn parse_vertex(&mut self, line_index: usize, parts: Vec<&str>) -> ParserResult<Vertex> {
-        // TODO: dont work if we have colors
-        // if vertex_str.len() != 3 {
-        //     return Err(ParserError::InvalidVertex);
-        // }
-
         if parts.len() < 3 {
             return Err(ParserError::with_message(
                 ParserErrorKind::InvalidVertexPosition,
@@ -227,7 +222,6 @@ impl<'a> DocumentParser<'a> {
             })
             .collect::<Result<Vec<f32>, ParserError>>()?;
 
-        // TODO: should not be try_from as we check for validity above?
         Position::try_from(position_parts)
     }
 
@@ -332,16 +326,18 @@ impl<'a> DocumentParser<'a> {
         // "Consume" vertex_count
         parts = &parts[1..];
 
+        // TODO
         // // sanity check
         // if face_str.len() != vertex_count as usize {
         //     return Err(ParserError::InvalidFace);
         // }
 
+        // TODO
         // faces are polygons and might have to be triangulated later. Therefore we require at least three vertices
         // if vertex_count < 3 {
         //     return Err(ParserError::InvalidFace);
         // }
-        let vertices = self.parse_face_index(line_index, vertex_count, parts)?;
+        let vertices = self.parse_face_indices(line_index, vertex_count, parts)?;
 
         // "Consume" vertex indexes
         parts = &parts[vertex_count..];
@@ -355,24 +351,19 @@ impl<'a> DocumentParser<'a> {
         Ok(Face { vertices, color })
     }
 
-    fn parse_face_index(
+    fn parse_face_indices(
         &mut self,
         line_index: usize,
         vertex_count: usize,
         parts: &[&str],
     ) -> ParserResult<Vec<usize>> {
-        // TODO: dont work if we have colors
-        // if vertex_str.len() != 3 {
-        //     return Err(ParserError::InvalidVertex);
-        // }
-
         let vertices: Vec<usize> = parts
             .iter()
             .take(vertex_count)
             .map(|s| {
                 s.parse().map_err(|err| {
                     ParserError::with_message(
-                        ParserErrorKind::InvalidFace,
+                        ParserErrorKind::InvalidFaceIndex,
                         line_index,
                         format!("Failed to parse vertex index as number: ({})", err),
                     )
@@ -455,61 +446,216 @@ mod tests {
 
     use super::*;
 
-    // #[test]
-    // #[should_panic]
-    // #[allow(unused)]
-    // fn test_state() {
-    //     let mut parser = DocumentParser {
-    //         lines: vec!["OFF"],
-    //         line: 0,
-    //         state: ParserState::Header,
-    //         document: OffDocument::new(),
-    //     };
-    //     parser.parse_counts();
-    // }
+    // TODO: test parse_header
+    // TODO: test parse_counts
+    // TODO: test parse_vertices
+    // TODO: test parse_vertex
+    // TODO: test parse_position
+    // TODO: test parse_color
+    // TODO: test parse_Faces
+    // TODO: test parse_face
 
-    // #[test]
-    // fn parse_header() {
-    //     let mut parser = DocumentParser {
-    //         lines: vec!["ignore", "me", "OFF", "!"],
-    //         line: 2,
-    //         state: ParserState::Header,
-    //         document: OffDocument::new(),
-    //     };
-    //     assert!(matches!(parser.parse_header(), Ok(_)));
-    //     let mut parser = DocumentParser {
-    //         lines: vec!["OOFF"],
-    //         line: 0,
-    //         state: ParserState::Header,
-    //         document: OffDocument::new(),
-    //     };
-    //     assert!(matches!(
-    //         parser.parse_header(),
-    //         Err(ParserError::InvalidHeader)
-    //     ));
-    // }
+    #[test]
+    fn parse_face() {
+        let mut parser = DocumentParser::new(&"", ParserOptions::default());
+        let result = parser.parse_face(0, &["3", "1", "2", "3"]);
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            Face {
+                vertices: vec![1, 2, 3],
+                color: None
+            }
+        );
+    }
 
-    // #[test]
-    // fn parse_counts() {
-    //     let mut parser = DocumentParser {
-    //         lines: vec!["a12 3 4"],
-    //         line: 0,
-    //         state: ParserState::Counts,
-    //         document: OffDocument::new(),
-    //     };
-    //     assert!(matches!(
-    //         parser.parse_counts(),
-    //         Err(ParserError::InvalidCounts)
-    //     ));
-    //     let mut parser = DocumentParser {
-    //         lines: vec!["1 1337 42"],
-    //         line: 0,
-    //         state: ParserState::Counts,
-    //         document: OffDocument::new(),
-    //     };
-    //     assert!(matches!(parser.parse_counts(), Ok(_)));
-    //     assert_eq!(parser.document.vertex_count(), 1);
-    //     assert_eq!(parser.document.face_count(), 1337);
-    //     assert_eq!(parser.document.edge_count(), 42);
-    // }
+    #[test]
+    fn parse_face_more() {
+        let mut parser = DocumentParser::new(&"", ParserOptions::default());
+        let result = parser.parse_face(0, &["4", "2", "3", "1", "1337"]);
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            Face {
+                vertices: vec![2, 3, 1, 1337],
+                color: None
+            }
+        );
+    }
+
+    #[test]
+    fn parse_face_too_little_parts() {
+        let mut parser = DocumentParser::new(&"", ParserOptions::default());
+        let result = parser.parse_face(0, &["6", "1", "2", "3"]);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ParserError {
+                kind: ParserErrorKind::InvalidFaceIndex,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_face_too_many_parts() {
+        let mut parser = DocumentParser::new(&"", ParserOptions::default());
+        let result = parser.parse_face(0, &["3", "2", "3", "2", "3"]);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ParserError {
+                kind: ParserErrorKind::InvalidColor,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_face_no_number() {
+        let mut parser = DocumentParser::new(&"", ParserOptions::default());
+        let result = parser.parse_face(0, &["3", "1", "asdf", "3"]);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ParserError {
+                kind: ParserErrorKind::InvalidFaceIndex,
+                ..
+            }
+        ));
+    }
+
+    // TODO: face colors
+
+    #[test]
+    fn parse_face_index() {
+        let mut parser = DocumentParser::new(&"", ParserOptions::default());
+        let result = parser.parse_face_indices(0, 3, &["1", "2", "3"]);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn parse_face_index_more() {
+        let mut parser = DocumentParser::new(&"", ParserOptions::default());
+        let result = parser.parse_face_indices(0, 5, &["1", "2", "3", "1", "1337"]);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), vec![1, 2, 3, 1, 1337]);
+    }
+
+    #[test]
+    fn parse_face_index_too_little_parts() {
+        let mut parser = DocumentParser::new(&"", ParserOptions::default());
+        let result = parser.parse_face_indices(0, 5, &["1", "2", "3"]);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ParserError {
+                kind: ParserErrorKind::InvalidFaceIndex,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_face_index_too_many_parts() {
+        let mut parser = DocumentParser::new(&"", ParserOptions::default());
+        let result = parser.parse_face_indices(0, 3, &["1", "2", "3", "2", "3"]);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn parse_face_index_no_number() {
+        let mut parser = DocumentParser::new(&"", ParserOptions::default());
+        let result = parser.parse_face_indices(0, 3, &["1", "asdf", "3"]);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ParserError {
+                kind: ParserErrorKind::InvalidFaceIndex,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn try_from_color_rgb() {
+        let vec = vec![1.0, 2.0, 3.0];
+        let color = Color::try_from(vec);
+        assert!(color.is_ok());
+        assert_eq!(color.unwrap(), Color::new(1.0, 2.0, 3.0, 1.0));
+    }
+
+    #[test]
+    fn try_from_color_rgba() {
+        let vec = vec![1.0, 2.0, 3.0, 4.0];
+        let color = Color::try_from(vec);
+        assert!(color.is_ok());
+        assert_eq!(color.unwrap(), Color::new(1.0, 2.0, 3.0, 4.0));
+    }
+
+    #[test]
+    fn try_from_color_err_too_little_arguments() {
+        let vec = vec![1.0, 2.0];
+        let color = Color::try_from(vec);
+        assert!(color.is_err());
+        assert!(matches!(
+            color.unwrap_err(),
+            ParserError {
+                kind: ParserErrorKind::InvalidColor,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn try_from_color_err_too_many_arguments() {
+        let vec = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let color = Color::try_from(vec);
+        assert!(color.is_err());
+        assert!(matches!(
+            color.unwrap_err(),
+            ParserError {
+                kind: ParserErrorKind::InvalidColor,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn try_from_positiom() {
+        let vec = vec![1.0, 2.0, 3.0];
+        let position = Position::try_from(vec);
+        assert!(position.is_ok());
+        assert_eq!(position.unwrap(), Position::new(1.0, 2.0, 3.0));
+    }
+
+    #[test]
+    fn try_from_positiom_too_little_arguments() {
+        let vec = vec![1.0, 2.0];
+        let position = Position::try_from(vec);
+        assert!(position.is_err());
+        assert!(matches!(
+            position.unwrap_err(),
+            ParserError {
+                kind: ParserErrorKind::InvalidVertexPosition,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn try_from_positiom_too_many_arguments() {
+        let vec = vec![1.0, 2.0, 3.0, 4.0];
+        let position = Position::try_from(vec);
+        assert!(position.is_err());
+        assert!(matches!(
+            position.unwrap_err(),
+            ParserError {
+                kind: ParserErrorKind::InvalidVertexPosition,
+                ..
+            }
+        ));
+    }
 }
