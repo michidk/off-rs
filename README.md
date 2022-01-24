@@ -1,11 +1,12 @@
 # off-rs - A simple .off file parser
 
-[![MIT License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](https://choosealicense.com/licenses/mit/) [![Continuous integration](https://img.shields.io/github/workflow/status/michidk/off-rs/Continuous%20Integration?style=for-the-badge)](https://github.com/michidk/off-rs/actions) [![Crates.io](https://img.shields.io/crates/v/off-rs?style=for-the-badge)](https://crates.io/crates/spirv-layout)
+[![MIT License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](https://choosealicense.com/licenses/mit/) [![Continuous integration](https://img.shields.io/github/workflow/status/michidk/off-rs/Continuous%20Integration?style=for-the-badge)](https://github.com/michidk/off-rs/actions) [![Crates.io](https://img.shields.io/crates/v/off-rs?style=for-the-badge)](https://crates.io/crates/off_rs)
 
-Parses `.off` ([Object File Format](https://en.wikipedia.org/wiki/OFF_(file_format))) files.
+Parses `.off` ([Object File Format](<https://en.wikipedia.org/wiki/OFF_(file_format)>)) files.
 This implementation follows [this spec](https://people.sc.fsu.edu/~jburkardt/data/off/off.html) from the Princeton Shape Benchmark.
 
 Sample `.off` file:
+
 ```
 # this file header has to be the first instruction
 OFF
@@ -33,12 +34,13 @@ OFF
   4  3 2 6 7  0.000 0.700 0.300 0.75
   4  6 5 4 7  0.000 1.000 0.000 0.75
 ```
+
 This [cube.off](examples/cube.off) file is parsed using `off-rs` [in this example](examples/cube.rs).
 
 ## Usage
 
 ```rust
-let mesh = OffDocument::parse(
+let mesh = Mesh::parse(
     content,
     ..Default::default() // optional ParserOptions
 );
@@ -47,8 +49,9 @@ println!("{:#?}", mesh);
 ```
 
 Will return a structure like this:
+
 ```
-OffDocument {
+Mesh {
     vertices: [
         Vertex {
             position: Position {

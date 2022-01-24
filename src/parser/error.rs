@@ -1,18 +1,18 @@
-use std::borrow::Cow;
+use std::{
+    borrow::Cow,
+    fmt::{Debug, Display, Formatter},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ParserError {
-    pub kind: ParserErrorKind,
+pub struct Error {
+    pub kind: Kind,
     pub line_index: usize,
     pub message: Option<Cow<'static, str>>,
 }
 
-impl ParserError {
-    pub fn new(
-        kind: ParserErrorKind,
-        line_index: usize,
-        message: Option<Cow<'static, str>>,
-    ) -> Self {
+impl Error {
+    #[must_use]
+    pub fn new(kind: Kind, line_index: usize, message: Option<Cow<'static, str>>) -> Self {
         Self {
             kind,
             line_index,
@@ -21,22 +21,23 @@ impl ParserError {
     }
 
     pub fn with_message<M: Into<Cow<'static, str>>, O: Into<Option<M>>>(
-        kind: ParserErrorKind,
+        kind: Kind,
         line_index: usize,
         message: O,
     ) -> Self {
-        Self::new(kind, line_index, message.into().map(|inner| inner.into()))
+        Self::new(kind, line_index, message.into().map(Into::into))
     }
 
-    pub fn without_message(kind: ParserErrorKind, line_index: usize) -> Self {
+    #[must_use]
+    pub fn without_message(kind: Kind, line_index: usize) -> Self {
         Self::new(kind, line_index, None)
     }
 }
 
-impl std::error::Error for ParserError {}
+impl std::error::Error for Error {}
 
-impl std::fmt::Display for ParserError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,
             "{} in line {}{}",
@@ -44,14 +45,13 @@ impl std::fmt::Display for ParserError {
             self.line_index + 1,
             self.message
                 .as_ref()
-                .map(|msg| format!(" - {}", msg))
-                .unwrap_or_else(String::new)
+                .map_or_else(String::new, |msg| format!(" - {}", msg))
         )
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ParserErrorKind {
+pub enum Kind {
     Empty,
     Missing,
     LimitExceeded,
@@ -64,8 +64,8 @@ pub enum ParserErrorKind {
     InvalidFaceIndex,
 }
 
-impl std::fmt::Display for ParserErrorKind {
+impl Display for Kind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        std::fmt::Debug::fmt(self, f)
+        Debug::fmt(self, f)
     }
 }

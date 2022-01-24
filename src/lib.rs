@@ -1,7 +1,8 @@
-// #![warn(clippy::pedantic)]
+#![warn(clippy::pedantic)]
+#![allow(clippy::missing_errors_doc)]
 
-pub mod document;
 pub mod geometry;
+pub mod mesh;
 pub mod parser;
 
 // TODO: check visibility of modules

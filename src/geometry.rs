@@ -6,6 +6,7 @@ pub struct Position {
 }
 
 impl Position {
+    #[must_use]
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
@@ -26,18 +27,22 @@ pub enum ColorFormat {
 }
 
 impl ColorFormat {
+    #[must_use]
     pub fn is_float(&self) -> bool {
         matches!(self, ColorFormat::RGBFloat | ColorFormat::RGBAFloat)
     }
 
+    #[must_use]
     pub fn is_integer(&self) -> bool {
         !self.is_float()
     }
 
+    #[must_use]
     pub fn has_alpha(&self) -> bool {
         matches!(self, ColorFormat::RGBAFloat | ColorFormat::RGBAInteger)
     }
 
+    #[must_use]
     pub fn element_count(&self) -> usize {
         if self.has_alpha() {
             4
@@ -62,6 +67,7 @@ pub struct Color {
 }
 
 impl Color {
+    #[must_use]
     pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
     }
@@ -84,6 +90,7 @@ impl From<Color> for Vec<f32> {
     }
 }
 
+#[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 impl From<Color> for Vec<u8> {
     fn from(value: Color) -> Vec<u8> {
         vec![
@@ -102,6 +109,7 @@ pub struct Vertex {
 }
 
 impl Vertex {
+    #[must_use]
     pub fn new(position: Position, color: Option<Color>) -> Self {
         Self { position, color }
     }
@@ -114,6 +122,7 @@ pub struct Face {
 }
 
 impl Face {
+    #[must_use]
     pub fn new(vertices: Vec<usize>, color: Option<Color>) -> Self {
         Self { vertices, color }
     }

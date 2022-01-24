@@ -1,14 +1,14 @@
 use std::path::Path;
 
 use off_rs::{
-    document::{OffDocument, ParserOptions},
     geometry::ColorFormat,
+    mesh::{Mesh, ParserOptions},
 };
 
 const PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/examples/cube.off");
 
 fn main() {
-    let mesh = OffDocument::from_path(
+    let mesh = Mesh::from_path(
         Path::new(PATH),
         ParserOptions {
             color_format: ColorFormat::RGBAFloat,

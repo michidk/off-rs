@@ -1,5 +1,5 @@
 #[allow(unused_imports)]
-use off_rs::{document::*, geometry::*};
+use off_rs::{geometry::*, mesh::*};
 
 #[test]
 fn spec_example() {
@@ -31,11 +31,11 @@ OFF
         color_format: ColorFormat::RGBAFloat,
         ..Default::default()
     };
-    let off = OffDocument::parse(content, options).unwrap();
+    let off = Mesh::parse(content, options).unwrap();
 
     assert_eq!(
         off,
-        OffDocument {
+        Mesh {
             vertices: vec![
                 Vertex {
                     position: Position {
@@ -190,11 +190,11 @@ OFF
         color_format: ColorFormat::RGBInteger,
         ..Default::default()
     };
-    let off = OffDocument::parse(content, options).unwrap();
+    let off = Mesh::parse(content, options).unwrap();
 
     assert_eq!(
         off,
-        OffDocument {
+        Mesh {
             vertices: vec![
                 Vertex {
                     position: Position {
@@ -342,10 +342,10 @@ OFF
 4 6 0 2 4
 "#;
 
-    let off = content.parse::<OffDocument>().unwrap();
+    let off = content.parse::<Mesh>().unwrap();
     assert_eq!(
         off,
-        OffDocument {
+        Mesh {
             vertices: vec![
                 Vertex {
                     position: Position {
@@ -453,7 +453,7 @@ OFF
 3 0 1 2
 "#;
 
-    let off = OffDocument::parse(
+    let off = Mesh::parse(
         content,
         ParserOptions {
             color_format: ColorFormat::RGBInteger,
@@ -465,7 +465,7 @@ OFF
     println!("{:#?}", off);
     assert_eq!(
         off,
-        OffDocument {
+        Mesh {
             vertices: vec![
                 Vertex {
                     position: Position {

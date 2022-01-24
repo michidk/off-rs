@@ -1,5 +1,5 @@
 #[allow(unused_imports)]
-use off_rs::{document::*, geometry::*, parser::error::*, parser::*};
+use off_rs::{geometry::*, mesh::*, parser::*};
 
 #[test]
 fn missing_vertex_color() {
@@ -12,7 +12,7 @@ OFF
 3 0 1 2
 "#;
 
-    let off = OffDocument::parse(
+    let off = Mesh::parse(
         content,
         ParserOptions {
             color_format: ColorFormat::RGBInteger,
@@ -22,8 +22,8 @@ OFF
 
     assert!(matches!(
         off.unwrap_err(),
-        DocumentError::ParserError(ParserError {
-            kind: ParserErrorKind::InvalidColor,
+        Error::ParserError(off_rs::parser::error::Error {
+            kind: off_rs::parser::error::Kind::InvalidColor,
             line_index: 4,
             message: _
         })

@@ -4,39 +4,38 @@ use std::path::Path;
 use std::str::FromStr;
 
 use crate::geometry::{ColorFormat, Face, Vertex};
-use crate::parser::error::ParserError;
-use crate::parser::DocumentParser;
+use crate::parser::Parser;
 
 #[derive(Debug)]
-pub enum DocumentError {
+pub enum Error {
     IOError(io::Error),
-    ParserError(ParserError),
+    ParserError(crate::parser::error::Error),
 }
 
-impl std::error::Error for DocumentError {}
+impl std::error::Error for Error {}
 
-impl std::fmt::Display for DocumentError {
+impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            DocumentError::IOError(e) => write!(f, "IO Error: {}", e),
-            DocumentError::ParserError(e) => write!(f, "Parser Error: {}", e),
+            Error::IOError(e) => write!(f, "IO Error: {}", e),
+            Error::ParserError(e) => write!(f, "Parser Error: {}", e),
         }
     }
 }
 
-impl From<io::Error> for DocumentError {
+impl From<io::Error> for Error {
     fn from(e: io::Error) -> Self {
-        DocumentError::IOError(e)
+        Error::IOError(e)
     }
 }
 
-impl From<ParserError> for DocumentError {
-    fn from(e: ParserError) -> Self {
-        DocumentError::ParserError(e)
+impl From<crate::parser::error::Error> for Error {
+    fn from(e: crate::parser::error::Error) -> Self {
+        Error::ParserError(e)
     }
 }
 
-pub type DocumentResult<D = OffDocument> = Result<D, DocumentError>;
+pub type Result<D = Mesh> = std::result::Result<D, Error>;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Limits {
@@ -62,49 +61,53 @@ pub struct ParserOptions {
 }
 
 #[derive(Default, Clone, PartialEq, Debug)]
-pub struct OffDocument {
+pub struct Mesh {
     pub vertices: Vec<Vertex>,
     pub faces: Vec<Face>,
 }
 
-impl OffDocument {
+impl Mesh {
+    #[must_use]
     pub(crate) fn new() -> Self {
-        Default::default()
+        Self::default()
     }
 
-    pub fn from_path(path: &Path, options: ParserOptions) -> DocumentResult {
-        let mut file = File::open(path).map_err(DocumentError::IOError)?;
+    pub fn from_path(path: &Path, options: ParserOptions) -> Result {
+        let mut file = File::open(path).map_err(Error::IOError)?;
 
         let mut string = String::new();
         match file.read_to_string(&mut string) {
             Ok(_) => {}
-            Err(inner) => return Err(DocumentError::IOError(inner)),
+            Err(inner) => return Err(Error::IOError(inner)),
         };
 
         Self::parse(&string, options)
     }
 
-    pub fn parse(string: &str, options: ParserOptions) -> DocumentResult {
-        DocumentParser::new(&string, options).parse()
+    pub fn parse(string: &str, options: ParserOptions) -> Result {
+        Parser::new(&string, options).parse()
     }
 
+    #[must_use]
     pub fn vertex_count(&self) -> usize {
         self.vertices.len()
     }
 
+    #[must_use]
     pub fn face_count(&self) -> usize {
         self.faces.len()
     }
 
+    #[must_use]
     pub fn edge_count(&self) -> usize {
         self.faces.iter().map(|face| face.vertices.len() - 1).sum()
     }
 }
 
-impl FromStr for OffDocument {
-    type Err = DocumentError;
+impl FromStr for Mesh {
+    type Err = Error;
 
-    fn from_str(string: &str) -> DocumentResult {
-        Self::parse(string, Default::default())
+    fn from_str(string: &str) -> Result {
+        Self::parse(string, ParserOptions::default())
     }
 }

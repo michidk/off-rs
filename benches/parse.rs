@@ -1,12 +1,12 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use off_rs::document::ParserOptions;
 use off_rs::geometry::ColorFormat;
-use off_rs::parser::DocumentParser;
+use off_rs::mesh::ParserOptions;
+use off_rs::parser::OffDocument;
 
 const WIKI_OFF: &'static str = r#"OFF
 # cube.off
 # A cube
- 
+
 8 6 12
  1.0  0.0 1.4142
  0.0  1.0 1.4142
@@ -19,7 +19,7 @@ const WIKI_OFF: &'static str = r#"OFF
 4  0 1 2 3  255 0 0 #red
 4  7 4 0 3  0 255 0 #green
 4  4 5 1 0  0 0 255 #blue
-4  5 6 2 1  0 255 0 
+4  5 6 2 1  0 255 0
 4  3 2 6 7  0 0 255
 4  6 5 4 7  255 0 0
 "#;
@@ -54,7 +54,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             ..Default::default()
         };
 
-        b.iter(|| black_box(DocumentParser::new(&WIKI_OFF, opts).parse()))
+        b.iter(|| black_box(OffDocument::new(&WIKI_OFF, opts).parse()))
     });
 
     c.bench_function("parse prinston - off-rs", |b| {
@@ -63,7 +63,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             ..Default::default()
         };
 
-        b.iter(|| black_box(DocumentParser::new(&PRINSTON_OFF, opts).parse()))
+        b.iter(|| black_box(OffDocument::new(&PRINSTON_OFF, opts).parse()))
     });
 }
 
