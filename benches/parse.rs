@@ -1,69 +1,46 @@
+//! A simple benchmark which tries to parse a list of off documents.
+//!
+//! The results of the benchmark are **not** compared against other libraries
+//! but instead are used to check/test against regressions.
+//!
+//! # Run
+//!
+//! To run the benchmark run the following in a terminal:
+//!
+//! ```bash
+//! cargo bench parse
+//! ```
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use off_rs::geometry::ColorFormat;
 use off_rs::mesh::ParserOptions;
-use off_rs::parser::OffDocument;
+use off_rs::parser::Parser;
 
-const WIKI_OFF: &'static str = r#"OFF
-# cube.off
-# A cube
+/// OFF file from wikipedia.
+const WIKI_OFF: &'static str = include_str!("resources/wiki.off");
 
-8 6 12
- 1.0  0.0 1.4142
- 0.0  1.0 1.4142
--1.0  0.0 1.4142
- 0.0 -1.0 1.4142
- 1.0  0.0 0.0
- 0.0  1.0 0.0
--1.0  0.0 0.0
- 0.0 -1.0 0.0
-4  0 1 2 3  255 0 0 #red
-4  7 4 0 3  0 255 0 #green
-4  4 5 1 0  0 0 255 #blue
-4  5 6 2 1  0 255 0
-4  3 2 6 7  0 0 255
-4  6 5 4 7  255 0 0
-"#;
-
-const PRINSTON_OFF: &'static str = r#"OFF
-#
-#  cube.off
-#  A cube.
-#  There is extra RGBA color information specified for the faces.
-#
-8 6 12
-  1.632993   0.000000   1.154701
-  0.000000   1.632993   1.154701
- -1.632993   0.000000   1.154701
-  0.000000  -1.632993   1.154701
-  1.632993   0.000000  -1.154701
-  0.000000   1.632993  -1.154701
- -1.632993   0.000000  -1.154701
-  0.000000  -1.632993  -1.154701
-  4  0 1 2 3  1.000 0.000 0.000 0.75
-  4  7 4 0 3  0.300 0.400 0.000 0.75
-  4  4 5 1 0  0.200 0.500 0.100 0.75
-  4  5 6 2 1  0.100 0.600 0.200 0.75
-  4  3 2 6 7  0.000 0.700 0.300 0.75
-  4  6 5 4 7  0.000 1.000 0.000 0.75
-"#;
+/// OFF file from the prinston off specification.
+const PRINSTON_OFF: &'static str = include_str!("resources/prinston.off");
 
 pub fn criterion_benchmark(c: &mut Criterion) {
+    // Creates a new benchmark function for the wiki example
     c.bench_function("parse wiki - off-rs", |b| {
         let opts = ParserOptions {
-            color_format: ColorFormat::RGBAFloat,
+            color_format: ColorFormat::RGBInteger,
             ..Default::default()
         };
 
-        b.iter(|| black_box(OffDocument::new(&WIKI_OFF, opts).parse()))
+        b.iter(|| black_box(Parser::new(&WIKI_OFF, opts).parse()))
     });
 
+    // Creates a new benchmark function for the prinston example
     c.bench_function("parse prinston - off-rs", |b| {
         let opts = ParserOptions {
             color_format: ColorFormat::RGBAFloat,
             ..Default::default()
         };
 
-        b.iter(|| black_box(OffDocument::new(&PRINSTON_OFF, opts).parse()))
+        b.iter(|| black_box(Parser::new(&PRINSTON_OFF, opts).parse()))
     });
 }
 
