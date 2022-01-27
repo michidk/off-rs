@@ -1,6 +1,6 @@
 # off-rs - A simple .off file parser
 
-[![MIT License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](https://choosealicense.com/licenses/mit/) [![Continuous integration](https://img.shields.io/github/workflow/status/michidk/off-rs/Continuous%20Integration?style=for-the-badge)](https://github.com/michidk/off-rs/actions) [![Crates.io](https://img.shields.io/crates/v/off-rs?style=for-the-badge)](https://crates.io/crates/off_rs)
+[![Apache 2.0 License](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)](http://www.apache.org/licenses/LICENSE-2.0) [![MIT License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](http://opensource.org/licenses/MIT) [![Continuous integration](https://img.shields.io/github/workflow/status/michidk/off-rs/Continuous%20Integration?style=for-the-badge)](https://github.com/michidk/off-rs/actions) [![Crates.io](https://img.shields.io/crates/v/off-rs?style=for-the-badge)](https://crates.io/crates/off-rs)
 
 Parses `.off` ([Object File Format](<https://en.wikipedia.org/wiki/OFF_(file_format)>)) files.
 This implementation follows [this spec](https://people.sc.fsu.edu/~jburkardt/data/off/off.html) from the Princeton Shape Benchmark.
