@@ -50,8 +50,6 @@ impl<'a> Parser<'a> {
         self.parse_vertices()?;
         self.parse_faces()?;
 
-        // TODO: valitdate the counts
-
         Ok(self.finalize())
     }
 
@@ -85,19 +83,6 @@ impl<'a> Parser<'a> {
         })?;
 
         let counts: Vec<&str> = line.split_line();
-
-        // let num: Vec<usize> = counts
-        //     .into_iter()
-        //     .map(|s| {
-        //         s.parse().map_err(|err| {
-        //             ParserError::with_message(
-        //                 ParserErrorKind::InvalidCounts,
-        //                 line_index,
-        //                 format!("Failed to parse count as number ({})", err),
-        //             )
-        //         })
-        //     })
-        //     .collect::<Result<Vec<usize>, ParserError>>()?;
 
         let num: Vec<usize> = counts.convert_vec().map_err(|err| {
             Error::with_message(
@@ -325,6 +310,17 @@ impl<'a> Parser<'a> {
             )
         })?;
 
+        if vertex_count < 3 {
+            return Err(Error::with_message(
+                Kind::InvalidFace,
+                line_index,
+                format!(
+                    "Vertex count should be at least 3 (actual: {})",
+                    vertex_count
+                ),
+            ));
+        }
+
         if vertex_count > self.options.limits.face_vertex_count {
             return Err(Error::with_message(
                 Kind::LimitExceeded,
@@ -339,17 +335,31 @@ impl<'a> Parser<'a> {
         // "Consume" vertex_count
         parts = &parts[1..];
 
-        // TODO
-        // // sanity check
-        // if face_str.len() != vertex_count as usize {
-        //     return Err(ParserError::InvalidFace);
-        // }
-
-        // TODO
         // faces are polygons and might have to be triangulated later. Therefore we require at least three vertices
-        // if vertex_count < 3 {
-        //     return Err(ParserError::InvalidFace);
-        // }
+        if parts.len() < 3 {
+            return Err(Error::with_message(
+                Kind::InvalidFace,
+                line_index,
+                format!(
+                    "Not enough vertices for face (expected: >= 3, actual: {})",
+                    parts.len()
+                ),
+            ));
+        }
+
+        // sanity check: at least vertex_count parts
+        if parts.len() < vertex_count {
+            return Err(Error::with_message(
+                Kind::InvalidFace,
+                line_index,
+                format!(
+                    "Not enough vertex indices given for face definition (expected: {}, actual: {})",
+                    vertex_count,
+                    parts.len()
+                ),
+            ));
+        }
+
         let vertices = Parser::parse_face_indices(line_index, vertex_count, parts)?;
 
         // "Consume" vertex indexes
@@ -800,7 +810,7 @@ mod tests {
         assert!(matches!(
             result.unwrap_err(),
             Error {
-                kind: Kind::InvalidFaceIndex,
+                kind: Kind::InvalidFace,
                 ..
             }
         ));
@@ -825,6 +835,7 @@ mod tests {
         let mut parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["3", "1", "asdf", "3"]);
         assert!(result.is_err());
+        println!("{:?}", result);
         assert!(matches!(
             result.unwrap_err(),
             Error {
