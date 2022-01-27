@@ -1,3 +1,4 @@
+use off_rs::geometry::color_format::ColorFormat;
 #[allow(unused_imports)]
 use off_rs::{geometry::*, mesh::*, parser::*};
 

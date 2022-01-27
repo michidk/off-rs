@@ -48,7 +48,7 @@ mod tests {
         test
         "#;
 
-        let mut lines = OffLines::new(str.as_ref()).peekable();
+        let mut lines = OffLines::new(str).peekable();
         assert_eq!(lines.next(), Some((0, "this")));
         assert_eq!(lines.next(), Some((1, "is")));
         assert_eq!(lines.next(), Some((2, "a")));

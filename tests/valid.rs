@@ -1,3 +1,9 @@
+use off_rs::geometry::{
+    color::Color,
+    color_format::ColorFormat,
+    mesh::{Face, Vertex},
+    position::Position,
+};
 #[allow(unused_imports)]
 use off_rs::{geometry::*, mesh::*};
 
@@ -170,10 +176,10 @@ OFF
 # A cube
 
 8 6 12
- 1.0  0.0 1.4142
- 0.0  1.0 1.4142
--1.0  0.0 1.4142
- 0.0 -1.0 1.4142
+ 1.0  0.0 1.5142
+ 0.0  1.0 1.5142
+-1.0  0.0 1.5142
+ 0.0 -1.0 1.5142
  1.0  0.0 0.0
  0.0  1.0 0.0
 -1.0  0.0 0.0
@@ -200,7 +206,7 @@ OFF
                     position: Position {
                         x: 1.0,
                         y: 0.0,
-                        z: 1.4142,
+                        z: 1.5142,
                     },
                     color: None,
                 },
@@ -208,7 +214,7 @@ OFF
                     position: Position {
                         x: 0.0,
                         y: 1.0,
-                        z: 1.4142,
+                        z: 1.5142,
                     },
                     color: None,
                 },
@@ -216,7 +222,7 @@ OFF
                     position: Position {
                         x: -1.0,
                         y: 0.0,
-                        z: 1.4142,
+                        z: 1.5142,
                     },
                     color: None,
                 },
@@ -224,7 +230,7 @@ OFF
                     position: Position {
                         x: 0.0,
                         y: -1.0,
-                        z: 1.4142,
+                        z: 1.5142,
                     },
                     color: None,
                 },

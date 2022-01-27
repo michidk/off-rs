@@ -3,7 +3,8 @@ use std::io::{self, Read};
 use std::path::Path;
 use std::str::FromStr;
 
-use crate::geometry::{ColorFormat, Face, Vertex};
+use crate::geometry::color_format::ColorFormat;
+use crate::geometry::mesh::{Face, Vertex};
 use crate::parser::Parser;
 
 #[derive(Debug)]

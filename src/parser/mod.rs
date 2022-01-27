@@ -3,7 +3,11 @@ mod iter;
 mod utils;
 
 use crate::{
-    geometry::{Color, Face, Position, Vertex},
+    geometry::{
+        color::Color,
+        mesh::{Face, Vertex},
+        position::Position,
+    },
     mesh::{Mesh, ParserOptions},
 };
 
@@ -571,18 +575,18 @@ mod tests {
 
     #[test]
     fn try_from_color_rgb() {
-        let vec = vec![1.0, 2.0, 3.0];
+        let vec = vec![0.1, 0.2, 0.3, 0.4];
         let color = Color::try_from(vec);
         assert!(color.is_ok());
-        assert_eq!(color.unwrap(), Color::new(1.0, 2.0, 3.0, 1.0));
+        assert_eq!(color.unwrap(), Color::new(0.1, 0.2, 0.3, 0.4).unwrap());
     }
 
     #[test]
     fn try_from_color_rgba() {
-        let vec = vec![1.0, 2.0, 3.0, 4.0];
+        let vec = vec![0.1, 0.2, 0.3, 0.4];
         let color = Color::try_from(vec);
         assert!(color.is_ok());
-        assert_eq!(color.unwrap(), Color::new(1.0, 2.0, 3.0, 4.0));
+        assert_eq!(color.unwrap(), Color::new(0.1, 0.2, 0.3, 0.4).unwrap());
     }
 
     #[test]

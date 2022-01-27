@@ -12,15 +12,15 @@
 //! ```
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use off_rs::geometry::ColorFormat;
+use off_rs::geometry::color_format::ColorFormat;
 use off_rs::mesh::ParserOptions;
 use off_rs::parser::Parser;
 
 /// OFF file from wikipedia.
-const WIKI_OFF: &'static str = include_str!("resources/wiki.off");
+const WIKI_OFF: &str = include_str!("resources/wiki.off");
 
 /// OFF file from the prinston off specification.
-const PRINSTON_OFF: &'static str = include_str!("resources/prinston.off");
+const PRINSTON_OFF: &str = include_str!("resources/prinston.off");
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     // Creates a new benchmark function for the wiki example
