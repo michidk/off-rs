@@ -222,7 +222,13 @@ impl<'a> Parser<'a> {
             })
             .collect::<Result<Vec<f32>>>()?;
 
-        Position::try_from(position_parts)
+        Position::try_from(position_parts).map_err(|err| {
+            Error::with_message(
+                Kind::InvalidVertexPosition,
+                line_index,
+                format!("Failed to parse position: ({})", err),
+            )
+        })
     }
 
     fn parse_color(&mut self, line_index: usize, parts: &[&str]) -> Result<Color> {
@@ -238,9 +244,9 @@ impl<'a> Parser<'a> {
             ));
         }
 
-        let color_float = if self.options.color_format.is_float() {
-            // directly parse as f32
-            parts
+        if self.options.color_format.is_float() {
+            // parse as f32
+            let color_parts = parts
                 .iter()
                 .map(|s| {
                     s.parse::<f32>().map_err(|err| {
@@ -251,13 +257,21 @@ impl<'a> Parser<'a> {
                         )
                     })
                 })
-                .collect::<Result<Vec<f32>>>()
+                .collect::<Result<Vec<f32>>>()?;
+
+            Color::try_from(color_parts).map_err(|err| {
+                Error::with_message(
+                    Kind::InvalidColor,
+                    line_index,
+                    format!("Failed to parse color: {}", err),
+                )
+            })
         } else {
-            // parse as u8 and convert to f32
-            parts
+            // parse as u8
+            let color_parts = parts
                 .iter()
                 .map(|s| {
-                    s.parse::<u8>().map(f32::from).map_err(|err| {
+                    s.parse::<u8>().map_err(|err| {
                         Error::with_message(
                             Kind::InvalidColor,
                             line_index,
@@ -265,16 +279,16 @@ impl<'a> Parser<'a> {
                         )
                     })
                 })
-                .collect::<Result<Vec<f32>>>()
-        }?;
+                .collect::<Result<Vec<u8>>>()?;
 
-        Color::try_from(color_float).map_err(|err| {
-            Error::with_message(
-                Kind::InvalidColor,
-                line_index,
-                format!("Failed to parse color: {}", err),
-            )
-        })
+            Color::try_from(color_parts).map_err(|err| {
+                Error::with_message(
+                    Kind::InvalidColor,
+                    line_index,
+                    format!("Failed to parse color: {}", err),
+                )
+            })
+        }
     }
 
     fn parse_faces(&mut self) -> Result {
@@ -390,69 +404,369 @@ impl<'a> Parser<'a> {
     }
 }
 
-impl TryFrom<Vec<f32>> for Color {
-    type Error = Error;
-
-    fn try_from(value: Vec<f32>) -> std::result::Result<Self, Self::Error> {
-        if 3 > value.len() || 4 < value.len() {
-            return Err(Self::Error::with_message(
-                Kind::InvalidColor,
-                0,
-                format!(
-                    "Invalid amount of arguments (expected: 3-4, actual: {})",
-                    value.len()
-                ),
-            ));
-        }
-
-        let alpha = if value.len() == 4 { value[3] } else { 1.0 };
-
-        Ok(Self {
-            r: value[0],
-            g: value[1],
-            b: value[2],
-            a: alpha,
-        })
-    }
-}
-
-impl TryFrom<Vec<f32>> for Position {
-    type Error = Error;
-
-    fn try_from(value: Vec<f32>) -> std::result::Result<Self, Self::Error> {
-        if value.len() != 3 {
-            return Err(Self::Error::with_message(
-                Kind::InvalidVertexPosition,
-                0,
-                format!(
-                    "Invalid amount of arguments (expected: 3, actual: {})",
-                    value.len()
-                ),
-            ));
-        }
-
-        Ok(Self {
-            x: value[0],
-            y: value[1],
-            z: value[2],
-        })
-    }
-}
-
 #[cfg(test)]
 #[allow(unused)]
 mod tests {
 
+    use crate::geometry::color_format::ColorFormat;
+
     use super::*;
 
-    // TODO: test parse_header
-    // TODO: test parse_counts
-    // TODO: test parse_vertices
-    // TODO: test parse_vertex
-    // TODO: test DocumentParser::parse_position
-    // TODO: test parse_color
-    // TODO: test parse_Faces
-    // TODO: test parse_face
+    #[test]
+    fn parse_header() {
+        let mut parser = Parser::new(&"OFF", ParserOptions::default());
+        assert!(parser.parse_header().is_ok());
+    }
+
+    #[test]
+    fn parse_header_missing() {
+        let mut parser = Parser::new(&"", ParserOptions::default());
+        let header = parser.parse_header();
+        assert!(header.is_err());
+        assert!(matches!(
+            header.unwrap_err(),
+            Error {
+                kind: Kind::Empty,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_header_invalid() {
+        let mut parser = Parser::new(&"COFF", ParserOptions::default());
+        let header = parser.parse_header();
+        assert!(header.is_err());
+        assert!(matches!(
+            header.unwrap_err(),
+            Error {
+                kind: Kind::InvalidHeader,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_counts() {
+        let mut parser = Parser::new(&"8 6 12", ParserOptions::default());
+        assert!(parser.parse_counts().is_ok());
+        assert_eq!(parser.vertex_count, 8);
+        assert_eq!(parser.face_count, 6);
+        assert_eq!(parser.edge_count, 12);
+    }
+
+    #[test]
+    fn parse_counts_missing() {
+        let mut parser = Parser::new(&"", ParserOptions::default());
+        let counts = parser.parse_counts();
+        assert!(counts.is_err());
+        assert!(matches!(
+            counts.unwrap_err(),
+            Error {
+                kind: Kind::Missing,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_counts_too_many() {
+        let mut parser = Parser::new(&"8 6 12 16", ParserOptions::default());
+        let counts = parser.parse_counts();
+        assert!(counts.is_err());
+        assert!(matches!(
+            counts.unwrap_err(),
+            Error {
+                kind: Kind::InvalidCounts,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_counts_limits() {
+        let mut parser = Parser::new(
+            &"999999999999 888888888888 777777777",
+            ParserOptions::default(),
+        );
+        let counts = parser.parse_counts();
+        assert!(counts.is_err());
+        assert!(matches!(
+            counts.unwrap_err(),
+            Error {
+                kind: Kind::LimitExceeded,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_vertices() {
+        let mut parser = Parser::new(
+            &"3.0 1.0 2.0 0.1 0.2 0.3 1.0\n1.0 2.0 3.0 0.1 0.2 0.3 1.0",
+            ParserOptions::default(),
+        );
+        parser.vertex_count = 2;
+        let result = parser.parse_vertices();
+        assert!(result.is_ok());
+        assert!(parser.next_line().is_none());
+        assert!(parser.document.vertices.len() == 2);
+        assert!(
+            parser.document.vertices[0]
+                == Vertex::new(
+                    Position::new(3.0, 1.0, 2.0),
+                    Some(Color::new(0.1, 0.2, 0.3, 1.0).unwrap()),
+                )
+        );
+        assert!(
+            parser.document.vertices[1]
+                == Vertex::new(
+                    Position::new(1.0, 2.0, 3.0),
+                    Some(Color::new(0.1, 0.2, 0.3, 1.0).unwrap()),
+                )
+        );
+    }
+
+    #[test]
+    fn parse_vertex() {
+        let mut parser = Parser::new(&"", ParserOptions::default());
+
+        let vertex = parser.parse_vertex(0, &["1.0", "2.0", "3.0"]);
+        assert!(vertex.is_ok());
+        assert_eq!(
+            vertex.unwrap(),
+            Vertex::new(Position::new(1.0, 2.0, 3.0), None)
+        );
+    }
+
+    #[test]
+    fn parse_vertex_too_few_parts() {
+        let mut parser = Parser::new(&"", ParserOptions::default());
+
+        let vertex = parser.parse_vertex(0, &["1.0", "2.0"]);
+        assert!(vertex.is_err());
+        assert!(matches!(
+            vertex.unwrap_err(),
+            Error {
+                kind: Kind::InvalidVertexPosition,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_position() {
+        let position = Parser::parse_position(0, &["1", "2", "3"]);
+        assert!(position.is_ok());
+        assert_eq!(
+            position.unwrap(),
+            Position {
+                x: 1.0,
+                y: 2.0,
+                z: 3.0
+            }
+        );
+    }
+
+    #[test]
+    fn parse_position_no_number() {
+        let position = Parser::parse_position(0, &["1", "2", "a"]);
+        assert!(position.is_err());
+        assert!(matches!(
+            position.unwrap_err(),
+            Error {
+                kind: Kind::InvalidVertexPosition,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_position_too_few_parts() {
+        let position = Parser::parse_position(0, &["1", "2"]);
+        assert!(position.is_err());
+        assert!(matches!(
+            position.unwrap_err(),
+            Error {
+                kind: Kind::InvalidVertexPosition,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_position_too_many_parts() {
+        let position = Parser::parse_position(0, &["1", "2", "3", "5"]);
+        assert!(position.is_err());
+        assert!(matches!(
+            position.unwrap_err(),
+            Error {
+                kind: Kind::InvalidVertexPosition,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_color_rgbfloat() {
+        let mut parser = Parser::new(
+            &"",
+            ParserOptions {
+                color_format: ColorFormat::RGBFloat,
+                ..ParserOptions::default()
+            },
+        );
+        let color = parser.parse_color(0, &["1.0", "0.5", "0.3"]);
+        assert!(color.is_ok());
+        assert_eq!(
+            color.unwrap(),
+            Color {
+                r: 1.0,
+                g: 0.5,
+                b: 0.3,
+                a: 1.0,
+            }
+        );
+    }
+
+    #[test]
+    fn parse_color_rgbafloat() {
+        let mut parser = Parser::new(
+            &"",
+            ParserOptions {
+                color_format: ColorFormat::RGBAFloat,
+                ..ParserOptions::default()
+            },
+        );
+        let color = parser.parse_color(0, &["1.0", "0.5", "0.3", "0.5"]);
+        assert!(color.is_ok());
+        assert_eq!(
+            color.unwrap(),
+            Color {
+                r: 1.0,
+                g: 0.5,
+                b: 0.3,
+                a: 0.5,
+            }
+        );
+    }
+
+    #[test]
+    fn parse_color_rgbinterger() {
+        let mut parser = Parser::new(
+            &"",
+            ParserOptions {
+                color_format: ColorFormat::RGBInteger,
+                ..ParserOptions::default()
+            },
+        );
+        let color = parser.parse_color(0, &["255", "128", "0"]);
+        assert!(color.is_ok());
+        assert_eq!(
+            color.unwrap(),
+            Color {
+                r: 1.0,
+                g: 0.501_960_8,
+                b: 0.0,
+                a: 1.0,
+            }
+        );
+    }
+
+    #[test]
+    fn parse_color_rgbinterger_fail() {
+        let mut parser = Parser::new(
+            &"",
+            ParserOptions {
+                color_format: ColorFormat::RGBInteger,
+                ..ParserOptions::default()
+            },
+        );
+        let color = parser.parse_color(0, &["255", "128.0", "0"]);
+        assert!(color.is_err());
+        assert!(matches!(
+            color.unwrap_err(),
+            Error {
+                kind: Kind::InvalidColor,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_color_rgbainterger() {
+        let mut parser = Parser::new(
+            &"",
+            ParserOptions {
+                color_format: ColorFormat::RGBAInteger,
+                ..ParserOptions::default()
+            },
+        );
+        let color = parser.parse_color(0, &["255", "128", "0", "255"]);
+        assert!(color.is_ok());
+        assert_eq!(
+            color.unwrap(),
+            Color {
+                r: 1.0,
+                g: 0.501_960_8,
+                b: 0.0,
+                a: 1.0,
+            }
+        );
+    }
+
+    #[test]
+    fn parse_color_element_count() {
+        let mut parser = Parser::new(
+            &"",
+            ParserOptions {
+                color_format: ColorFormat::RGBFloat,
+                ..ParserOptions::default()
+            },
+        );
+        let color = parser.parse_color(0, &["1.0", "0.5", "0.3", "0.4"]);
+        assert!(color.is_err());
+        assert!(matches!(
+            color.unwrap_err(),
+            Error {
+                kind: Kind::InvalidColor,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_faces() {
+        let mut parser = Parser::new(
+            &"3 1 2 3 0.1 0.2 0.3 1.0\n3 3 2 1 0.2 0.3 0.4 1.0",
+            ParserOptions::default(),
+        );
+        parser.face_count = 2;
+        let result = parser.parse_faces();
+        assert!(result.is_ok());
+        assert!(parser.next_line().is_none());
+        assert!(parser.document.faces.len() == 2);
+        assert!(parser.document.faces[0].vertices == vec![1, 2, 3]);
+        assert!(
+            parser.document.faces[0].color
+                == Some(Color {
+                    r: 0.1,
+                    g: 0.2,
+                    b: 0.3,
+                    a: 1.0,
+                })
+        );
+        assert!(parser.document.faces[1].vertices == vec![3, 2, 1]);
+        assert!(
+            parser.document.faces[1].color
+                == Some(Color {
+                    r: 0.2,
+                    g: 0.3,
+                    b: 0.4,
+                    a: 1.0,
+                })
+        );
+    }
 
     #[test]
     fn parse_face() {
@@ -524,7 +838,77 @@ mod tests {
         ));
     }
 
-    // TODO: face colors
+    #[test]
+    fn parse_face_color() {
+        let mut parser = Parser::new(&"", ParserOptions::default());
+        let result = parser.parse_face(0, &["3", "1", "2", "3", "0.1", "0.2", "0.3", "0.4"]);
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            Face {
+                vertices: vec![1, 2, 3],
+                color: Some(Color {
+                    r: 0.1,
+                    g: 0.2,
+                    b: 0.3,
+                    a: 0.4
+                })
+            }
+        );
+    }
+
+    #[test]
+    fn parse_face_color_fail() {
+        let mut parser = Parser::new(&"", ParserOptions::default());
+        let result = parser.parse_face(0, &["3", "1", "2", "3", "0.1", "0.2"]);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            Error {
+                kind: Kind::InvalidColor,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn parse_face_color_fail_no_alpha() {
+        let mut parser = Parser::new(
+            &"",
+            ParserOptions {
+                color_format: ColorFormat::RGBFloat,
+                ..ParserOptions::default()
+            },
+        );
+        let result = parser.parse_face(0, &["3", "1", "2", "3", "0.1", "0.2", "0.3"]);
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            Face {
+                vertices: vec![1, 2, 3],
+                color: Some(Color {
+                    r: 0.1,
+                    g: 0.2,
+                    b: 0.3,
+                    a: 1.0
+                })
+            }
+        );
+    }
+
+    #[test]
+    fn parse_face_color_fail_no_alpha_fail() {
+        let mut parser = Parser::new(&"", ParserOptions::default());
+        let result = parser.parse_face(0, &["3", "1", "2", "3", "0.1", "0.2", "0.3"]);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            Error {
+                kind: Kind::InvalidColor,
+                ..
+            }
+        ));
+    }
 
     #[test]
     fn parse_face_index() {
@@ -568,86 +952,6 @@ mod tests {
             result.unwrap_err(),
             Error {
                 kind: Kind::InvalidFaceIndex,
-                ..
-            }
-        ));
-    }
-
-    #[test]
-    fn try_from_color_rgb() {
-        let vec = vec![0.1, 0.2, 0.3, 0.4];
-        let color = Color::try_from(vec);
-        assert!(color.is_ok());
-        assert_eq!(color.unwrap(), Color::new(0.1, 0.2, 0.3, 0.4).unwrap());
-    }
-
-    #[test]
-    fn try_from_color_rgba() {
-        let vec = vec![0.1, 0.2, 0.3, 0.4];
-        let color = Color::try_from(vec);
-        assert!(color.is_ok());
-        assert_eq!(color.unwrap(), Color::new(0.1, 0.2, 0.3, 0.4).unwrap());
-    }
-
-    #[test]
-    fn try_from_color_err_too_little_arguments() {
-        let vec = vec![1.0, 2.0];
-        let color = Color::try_from(vec);
-        assert!(color.is_err());
-        assert!(matches!(
-            color.unwrap_err(),
-            Error {
-                kind: Kind::InvalidColor,
-                ..
-            }
-        ));
-    }
-
-    #[test]
-    fn try_from_color_err_too_many_arguments() {
-        let vec = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        let color = Color::try_from(vec);
-        assert!(color.is_err());
-        assert!(matches!(
-            color.unwrap_err(),
-            Error {
-                kind: Kind::InvalidColor,
-                ..
-            }
-        ));
-    }
-
-    #[test]
-    fn try_from_positiom() {
-        let vec = vec![1.0, 2.0, 3.0];
-        let position = Position::try_from(vec);
-        assert!(position.is_ok());
-        assert_eq!(position.unwrap(), Position::new(1.0, 2.0, 3.0));
-    }
-
-    #[test]
-    fn try_from_positiom_too_little_arguments() {
-        let vec = vec![1.0, 2.0];
-        let position = Position::try_from(vec);
-        assert!(position.is_err());
-        assert!(matches!(
-            position.unwrap_err(),
-            Error {
-                kind: Kind::InvalidVertexPosition,
-                ..
-            }
-        ));
-    }
-
-    #[test]
-    fn try_from_positiom_too_many_arguments() {
-        let vec = vec![1.0, 2.0, 3.0, 4.0];
-        let position = Position::try_from(vec);
-        assert!(position.is_err());
-        assert!(matches!(
-            position.unwrap_err(),
-            Error {
-                kind: Kind::InvalidVertexPosition,
                 ..
             }
         ));

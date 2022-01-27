@@ -38,15 +38,11 @@ impl std::error::Error for Error {}
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(
-            f,
-            "{} in line {}{}",
-            self.kind,
-            self.line_index + 1,
-            self.message
-                .as_ref()
-                .map_or_else(String::new, |msg| format!(" - {}", msg))
-        )
+        if let Some(msg) = &self.message {
+            write!(f, "{} @ ln:{} - {}", self.kind, self.line_index + 1, msg)
+        } else {
+            write!(f, "{} @ ln:{}", self.kind, self.line_index + 1,)
+        }
     }
 }
 
@@ -65,7 +61,7 @@ pub enum Kind {
 }
 
 impl Display for Kind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         Debug::fmt(self, f)
     }
 }
