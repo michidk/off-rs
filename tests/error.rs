@@ -1,6 +1,8 @@
-use off_rs::geometry::color_format::ColorFormat;
-#[allow(unused_imports)]
-use off_rs::{geometry::*, mesh::*, parser::*};
+use off_rs::{
+    geometry::{color_format::ColorFormat, mesh::Mesh},
+    parser::options::Options,
+    Error, Parse,
+};
 
 #[test]
 fn missing_vertex_color() {
@@ -15,7 +17,7 @@ OFF
 
     let off = Mesh::parse(
         content,
-        ParserOptions {
+        Options {
             color_format: ColorFormat::RGBInteger,
             ..Default::default()
         },

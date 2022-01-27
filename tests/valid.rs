@@ -1,11 +1,13 @@
-use off_rs::geometry::{
-    color::Color,
-    color_format::ColorFormat,
-    mesh::{Face, Vertex},
-    position::Position,
+use off_rs::{
+    geometry::{
+        color::Color,
+        color_format::ColorFormat,
+        mesh::{Face, Mesh, Vertex},
+        position::Position,
+    },
+    parser::options::Options,
+    Parse,
 };
-#[allow(unused_imports)]
-use off_rs::{geometry::*, mesh::*};
 
 #[test]
 fn spec_example() {
@@ -33,7 +35,7 @@ OFF
   4  6 5 4 7  0.000 1.000 0.000 0.75
 "#;
 
-    let options = ParserOptions {
+    let options = Options {
         color_format: ColorFormat::RGBAFloat,
         ..Default::default()
     };
@@ -192,7 +194,7 @@ OFF
 4  6 5 4 7  255 0 0
 "#;
 
-    let options = ParserOptions {
+    let options = Options {
         color_format: ColorFormat::RGBInteger,
         ..Default::default()
     };
@@ -348,7 +350,7 @@ OFF
 4 6 0 2 4
 "#;
 
-    let off = content.parse::<Mesh>().unwrap();
+    let off = Mesh::parse(content, Default::default()).unwrap();
     assert_eq!(
         off,
         Mesh {
@@ -461,7 +463,7 @@ OFF
 
     let off = Mesh::parse(
         content,
-        ParserOptions {
+        Options {
             color_format: ColorFormat::RGBInteger,
             ..Default::default()
         },

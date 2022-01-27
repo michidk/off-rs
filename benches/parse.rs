@@ -13,7 +13,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use off_rs::geometry::color_format::ColorFormat;
-use off_rs::mesh::ParserOptions;
+use off_rs::parser::options::Options;
 use off_rs::parser::Parser;
 
 /// OFF file from wikipedia.
@@ -25,7 +25,7 @@ const PRINSTON_OFF: &str = include_str!("resources/prinston.off");
 pub fn criterion_benchmark(c: &mut Criterion) {
     // Creates a new benchmark function for the wiki example
     c.bench_function("parse wiki - off-rs", |b| {
-        let opts = ParserOptions {
+        let opts = Options {
             color_format: ColorFormat::RGBInteger,
             ..Default::default()
         };
@@ -35,7 +35,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
     // Creates a new benchmark function for the prinston example
     c.bench_function("parse prinston - off-rs", |b| {
-        let opts = ParserOptions {
+        let opts = Options {
             color_format: ColorFormat::RGBAFloat,
             ..Default::default()
         };

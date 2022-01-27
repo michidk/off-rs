@@ -1,19 +1,18 @@
 pub mod error;
 mod iter;
+pub mod options;
 mod utils;
 
-use crate::{
-    geometry::{
-        color::Color,
-        mesh::{Face, Vertex},
-        position::Position,
-    },
-    mesh::{Mesh, ParserOptions},
+use crate::geometry::{
+    color::Color,
+    mesh::{Face, Mesh, Vertex},
+    position::Position,
 };
 
 use self::{
     error::{Error, Kind},
     iter::OffLines,
+    options::Options,
     utils::{ConvertVec, StrParts},
 };
 
@@ -27,11 +26,11 @@ pub struct Parser<'a> {
     face_count: usize,
     edge_count: usize,
     document: Mesh,
-    options: ParserOptions,
+    options: Options,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new<S: AsRef<str>>(s: &'a S, options: ParserOptions) -> Self {
+    pub fn new<S: AsRef<str>>(s: &'a S, options: Options) -> Self {
         let lines = OffLines::new(s.as_ref());
 
         Parser {
@@ -45,7 +44,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn parse(mut self) -> crate::mesh::Result {
+    pub fn parse(mut self) -> crate::Result {
         self.parse_header()?;
         self.parse_counts()?;
         self.parse_vertices()?;
@@ -414,13 +413,13 @@ mod tests {
 
     #[test]
     fn parse_header() {
-        let mut parser = Parser::new(&"OFF", ParserOptions::default());
+        let mut parser = Parser::new(&"OFF", Options::default());
         assert!(parser.parse_header().is_ok());
     }
 
     #[test]
     fn parse_header_missing() {
-        let mut parser = Parser::new(&"", ParserOptions::default());
+        let mut parser = Parser::new(&"", Options::default());
         let header = parser.parse_header();
         assert!(header.is_err());
         assert!(matches!(
@@ -434,7 +433,7 @@ mod tests {
 
     #[test]
     fn parse_header_invalid() {
-        let mut parser = Parser::new(&"COFF", ParserOptions::default());
+        let mut parser = Parser::new(&"COFF", Options::default());
         let header = parser.parse_header();
         assert!(header.is_err());
         assert!(matches!(
@@ -448,7 +447,7 @@ mod tests {
 
     #[test]
     fn parse_counts() {
-        let mut parser = Parser::new(&"8 6 12", ParserOptions::default());
+        let mut parser = Parser::new(&"8 6 12", Options::default());
         assert!(parser.parse_counts().is_ok());
         assert_eq!(parser.vertex_count, 8);
         assert_eq!(parser.face_count, 6);
@@ -457,7 +456,7 @@ mod tests {
 
     #[test]
     fn parse_counts_missing() {
-        let mut parser = Parser::new(&"", ParserOptions::default());
+        let mut parser = Parser::new(&"", Options::default());
         let counts = parser.parse_counts();
         assert!(counts.is_err());
         assert!(matches!(
@@ -471,7 +470,7 @@ mod tests {
 
     #[test]
     fn parse_counts_too_many() {
-        let mut parser = Parser::new(&"8 6 12 16", ParserOptions::default());
+        let mut parser = Parser::new(&"8 6 12 16", Options::default());
         let counts = parser.parse_counts();
         assert!(counts.is_err());
         assert!(matches!(
@@ -485,10 +484,7 @@ mod tests {
 
     #[test]
     fn parse_counts_limits() {
-        let mut parser = Parser::new(
-            &"999999999999 888888888888 777777777",
-            ParserOptions::default(),
-        );
+        let mut parser = Parser::new(&"999999999999 888888888888 777777777", Options::default());
         let counts = parser.parse_counts();
         assert!(counts.is_err());
         assert!(matches!(
@@ -504,7 +500,7 @@ mod tests {
     fn parse_vertices() {
         let mut parser = Parser::new(
             &"3.0 1.0 2.0 0.1 0.2 0.3 1.0\n1.0 2.0 3.0 0.1 0.2 0.3 1.0",
-            ParserOptions::default(),
+            Options::default(),
         );
         parser.vertex_count = 2;
         let result = parser.parse_vertices();
@@ -529,7 +525,7 @@ mod tests {
 
     #[test]
     fn parse_vertex() {
-        let mut parser = Parser::new(&"", ParserOptions::default());
+        let mut parser = Parser::new(&"", Options::default());
 
         let vertex = parser.parse_vertex(0, &["1.0", "2.0", "3.0"]);
         assert!(vertex.is_ok());
@@ -541,7 +537,7 @@ mod tests {
 
     #[test]
     fn parse_vertex_too_few_parts() {
-        let mut parser = Parser::new(&"", ParserOptions::default());
+        let mut parser = Parser::new(&"", Options::default());
 
         let vertex = parser.parse_vertex(0, &["1.0", "2.0"]);
         assert!(vertex.is_err());
@@ -611,9 +607,9 @@ mod tests {
     fn parse_color_rgbfloat() {
         let mut parser = Parser::new(
             &"",
-            ParserOptions {
+            Options {
                 color_format: ColorFormat::RGBFloat,
-                ..ParserOptions::default()
+                ..Options::default()
             },
         );
         let color = parser.parse_color(0, &["1.0", "0.5", "0.3"]);
@@ -633,9 +629,9 @@ mod tests {
     fn parse_color_rgbafloat() {
         let mut parser = Parser::new(
             &"",
-            ParserOptions {
+            Options {
                 color_format: ColorFormat::RGBAFloat,
-                ..ParserOptions::default()
+                ..Options::default()
             },
         );
         let color = parser.parse_color(0, &["1.0", "0.5", "0.3", "0.5"]);
@@ -655,9 +651,9 @@ mod tests {
     fn parse_color_rgbinterger() {
         let mut parser = Parser::new(
             &"",
-            ParserOptions {
+            Options {
                 color_format: ColorFormat::RGBInteger,
-                ..ParserOptions::default()
+                ..Options::default()
             },
         );
         let color = parser.parse_color(0, &["255", "128", "0"]);
@@ -677,9 +673,9 @@ mod tests {
     fn parse_color_rgbinterger_fail() {
         let mut parser = Parser::new(
             &"",
-            ParserOptions {
+            Options {
                 color_format: ColorFormat::RGBInteger,
-                ..ParserOptions::default()
+                ..Options::default()
             },
         );
         let color = parser.parse_color(0, &["255", "128.0", "0"]);
@@ -697,9 +693,9 @@ mod tests {
     fn parse_color_rgbainterger() {
         let mut parser = Parser::new(
             &"",
-            ParserOptions {
+            Options {
                 color_format: ColorFormat::RGBAInteger,
-                ..ParserOptions::default()
+                ..Options::default()
             },
         );
         let color = parser.parse_color(0, &["255", "128", "0", "255"]);
@@ -719,9 +715,9 @@ mod tests {
     fn parse_color_element_count() {
         let mut parser = Parser::new(
             &"",
-            ParserOptions {
+            Options {
                 color_format: ColorFormat::RGBFloat,
-                ..ParserOptions::default()
+                ..Options::default()
             },
         );
         let color = parser.parse_color(0, &["1.0", "0.5", "0.3", "0.4"]);
@@ -739,7 +735,7 @@ mod tests {
     fn parse_faces() {
         let mut parser = Parser::new(
             &"3 1 2 3 0.1 0.2 0.3 1.0\n3 3 2 1 0.2 0.3 0.4 1.0",
-            ParserOptions::default(),
+            Options::default(),
         );
         parser.face_count = 2;
         let result = parser.parse_faces();
@@ -770,7 +766,7 @@ mod tests {
 
     #[test]
     fn parse_face() {
-        let mut parser = Parser::new(&"", ParserOptions::default());
+        let mut parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["3", "1", "2", "3"]);
         assert!(result.is_ok());
         assert_eq!(
@@ -784,7 +780,7 @@ mod tests {
 
     #[test]
     fn parse_face_more() {
-        let mut parser = Parser::new(&"", ParserOptions::default());
+        let mut parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["4", "2", "3", "1", "1337"]);
         assert!(result.is_ok());
         assert_eq!(
@@ -798,7 +794,7 @@ mod tests {
 
     #[test]
     fn parse_face_too_little_parts() {
-        let mut parser = Parser::new(&"", ParserOptions::default());
+        let mut parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["6", "1", "2", "3"]);
         assert!(result.is_err());
         assert!(matches!(
@@ -812,7 +808,7 @@ mod tests {
 
     #[test]
     fn parse_face_too_many_parts() {
-        let mut parser = Parser::new(&"", ParserOptions::default());
+        let mut parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["3", "2", "3", "2", "3"]);
         assert!(result.is_err());
         assert!(matches!(
@@ -826,7 +822,7 @@ mod tests {
 
     #[test]
     fn parse_face_no_number() {
-        let mut parser = Parser::new(&"", ParserOptions::default());
+        let mut parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["3", "1", "asdf", "3"]);
         assert!(result.is_err());
         assert!(matches!(
@@ -840,7 +836,7 @@ mod tests {
 
     #[test]
     fn parse_face_color() {
-        let mut parser = Parser::new(&"", ParserOptions::default());
+        let mut parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["3", "1", "2", "3", "0.1", "0.2", "0.3", "0.4"]);
         assert!(result.is_ok());
         assert_eq!(
@@ -859,7 +855,7 @@ mod tests {
 
     #[test]
     fn parse_face_color_fail() {
-        let mut parser = Parser::new(&"", ParserOptions::default());
+        let mut parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["3", "1", "2", "3", "0.1", "0.2"]);
         assert!(result.is_err());
         assert!(matches!(
@@ -875,9 +871,9 @@ mod tests {
     fn parse_face_color_fail_no_alpha() {
         let mut parser = Parser::new(
             &"",
-            ParserOptions {
+            Options {
                 color_format: ColorFormat::RGBFloat,
-                ..ParserOptions::default()
+                ..Options::default()
             },
         );
         let result = parser.parse_face(0, &["3", "1", "2", "3", "0.1", "0.2", "0.3"]);
@@ -898,7 +894,7 @@ mod tests {
 
     #[test]
     fn parse_face_color_fail_no_alpha_fail() {
-        let mut parser = Parser::new(&"", ParserOptions::default());
+        let mut parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["3", "1", "2", "3", "0.1", "0.2", "0.3"]);
         assert!(result.is_err());
         assert!(matches!(

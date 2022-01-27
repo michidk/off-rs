@@ -31,3 +31,31 @@ impl From<Face> for Vec<usize> {
         value.vertices
     }
 }
+
+#[derive(Default, Clone, PartialEq, Debug)]
+pub struct Mesh {
+    pub vertices: Vec<Vertex>,
+    pub faces: Vec<Face>,
+}
+
+impl Mesh {
+    #[must_use]
+    pub(crate) fn new() -> Self {
+        Self::default()
+    }
+
+    #[must_use]
+    pub fn vertex_count(&self) -> usize {
+        self.vertices.len()
+    }
+
+    #[must_use]
+    pub fn face_count(&self) -> usize {
+        self.faces.len()
+    }
+
+    #[must_use]
+    pub fn edge_count(&self) -> usize {
+        self.faces.iter().map(|face| face.vertices.len() - 1).sum()
+    }
+}
