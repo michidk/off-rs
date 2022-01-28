@@ -1,11 +1,10 @@
 use off_rs::{
     geometry::{
         color::Color,
-        color_format::ColorFormat,
         mesh::{Face, Mesh, Vertex},
         position::Position,
     },
-    parser::options::Options,
+    parser::{color_format::ColorFormat, options::Options},
     Parse,
 };
 

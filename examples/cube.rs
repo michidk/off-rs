@@ -1,8 +1,8 @@
 use std::path::Path;
 
 use off_rs::{
-    geometry::{color_format::ColorFormat, mesh::Mesh},
-    parser::options::Options,
+    geometry::mesh::Mesh,
+    parser::{color_format::ColorFormat, options::Options},
     FromPath,
 };
 

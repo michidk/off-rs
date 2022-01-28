@@ -1,3 +1,4 @@
+pub mod color_format;
 pub mod error;
 mod iter;
 pub mod options;
@@ -417,7 +418,7 @@ impl<'a> Parser<'a> {
 #[allow(unused)]
 mod tests {
 
-    use crate::geometry::color_format::ColorFormat;
+    use crate::parser::color_format::ColorFormat;
 
     use super::*;
 

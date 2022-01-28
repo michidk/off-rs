@@ -1,10 +1,10 @@
-use crate::geometry::color_format::ColorFormat;
+use super::color_format::ColorFormat;
 
 /// Defines limits for the [`Parser`](`crate::parser::Parser`).
 ///
 /// # Note
 ///
-/// When these limits are exceeded during the [`parse`](`crate::parser::Parser::parse`)
+/// When these limits are exceeded during the [`parse`](`crate::parser::Parser::<'_>::parse`)
 /// processes an error will be returned.
 ///
 /// Use the [`Default`](`Limits::default`) implementation for reasonable values.
@@ -12,7 +12,7 @@ use crate::geometry::color_format::ColorFormat;
 /// # Examples
 ///
 /// ```rust
-/// # use off_rs::mesh::Limits;
+/// use off_rs::parser::options::Limits;
 /// let limits = Limits::default();
 /// ```
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

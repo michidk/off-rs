@@ -12,7 +12,7 @@ pub struct Error {
 
 impl Error {
     #[must_use]
-    pub fn new(kind: Kind, line_index: usize, message: Option<Cow<'static, str>>) -> Self {
+    pub(crate) fn new(kind: Kind, line_index: usize, message: Option<Cow<'static, str>>) -> Self {
         Self {
             kind,
             line_index,
@@ -20,7 +20,7 @@ impl Error {
         }
     }
 
-    pub fn with_message<M: Into<Cow<'static, str>>, O: Into<Option<M>>>(
+    pub(crate) fn with_message<M: Into<Cow<'static, str>>, O: Into<Option<M>>>(
         kind: Kind,
         line_index: usize,
         message: O,
@@ -29,7 +29,7 @@ impl Error {
     }
 
     #[must_use]
-    pub fn without_message(kind: Kind, line_index: usize) -> Self {
+    pub(crate) fn without_message(kind: Kind, line_index: usize) -> Self {
         Self::new(kind, line_index, None)
     }
 }
