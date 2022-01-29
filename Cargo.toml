@@ -1,6 +1,6 @@
 [package]
 name = "off-rs"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = ["Michael Lohr <michael@lohr.dev>", "Jonas Grawe"]
 keywords = ["off", "3d", "format", "mesh"]
