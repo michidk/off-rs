@@ -3,14 +3,19 @@ use std::{
     fmt::{Debug, Display, Formatter},
 };
 
+/// An error that occured while parsing the `off` string line by line.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Error {
+    /// The [`Kind`] of the error.
     pub kind: Kind,
+    /// The line number in the `off` string where the error occured.
     pub line_index: usize,
+    /// An error message describing the problem.
     pub message: Option<Cow<'static, str>>,
 }
 
 impl Error {
+    /// Creates a new [`Error`] with the given [`Kind`], line number and optionally a message.
     #[must_use]
     pub(crate) fn new(kind: Kind, line_index: usize, message: Option<Cow<'static, str>>) -> Self {
         Self {
@@ -20,6 +25,8 @@ impl Error {
         }
     }
 
+    /// Creates a new [`Error`] with the given [`Kind`] and line numbber and a string as message.
+    #[must_use]
     pub(crate) fn with_message<M: Into<Cow<'static, str>>, O: Into<Option<M>>>(
         kind: Kind,
         line_index: usize,
@@ -28,6 +35,7 @@ impl Error {
         Self::new(kind, line_index, message.into().map(Into::into))
     }
 
+    /// Creates a new [`Error`] with the given [`Kind`] and line number.
     #[must_use]
     pub(crate) fn without_message(kind: Kind, line_index: usize) -> Self {
         Self::new(kind, line_index, None)
@@ -48,15 +56,23 @@ impl Display for Error {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Kind {
+    /// The `off` string is empty.
     Empty,
+    /// An element is missing (e.g. counts, vertices, faces).
     Missing,
+    /// A limit was exceeded.
     LimitExceeded,
-    Invalid,
+    /// The header has a invalid format.
     InvalidHeader,
+    /// The counts of vertices, faces and edges have an invalid format.
     InvalidCounts,
+    /// The vertex position has an invalid format.
     InvalidVertexPosition,
+    /// The color has an invalid format.
     InvalidColor,
+    /// The face definition has an invalid format.
     InvalidFace,
+    /// The face indicies have an invalid format.
     InvalidFaceIndex,
 }
 

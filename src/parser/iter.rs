@@ -1,5 +1,6 @@
 use std::{iter::Enumerate, str::Lines};
 
+/// The line iterator for off files.
 // line iterator by github.com/Shemnei
 #[derive(Debug, Clone)]
 pub(super) struct OffLines<'a> {
@@ -7,6 +8,7 @@ pub(super) struct OffLines<'a> {
 }
 
 impl<'a> OffLines<'a> {
+    /// Creates a new line iterator for the given `off` string.
     pub fn new(s: &'a str) -> Self {
         Self {
             lines: s.lines().enumerate(),
@@ -17,6 +19,7 @@ impl<'a> OffLines<'a> {
 impl<'a> Iterator for OffLines<'a> {
     type Item = (usize, &'a str);
 
+    /// Iterates the lines ignoring comments and spaces.
     fn next(&mut self) -> Option<Self::Item> {
         for (line_index, mut line) in self.lines.by_ref() {
             if let Some(comment_index) = line.find('#') {

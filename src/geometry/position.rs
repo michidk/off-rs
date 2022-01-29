@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 
+/// Contains error that occur while performing conversions of the position.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Error {
     FromF32(String),
@@ -15,14 +16,20 @@ impl Display for Error {
 
 impl std::error::Error for Error {}
 
+/// Represents a position in 3D space.
+/// A position contains three floating point numbers, representing the x, y and z coordinates.
 #[derive(Copy, Clone, PartialEq, Debug, Default)]
 pub struct Position {
+    /// The x coordinate.
     pub x: f32,
+    /// The y coordinate.
     pub y: f32,
+    /// The z coordinate.
     pub z: f32,
 }
 
 impl Position {
+    /// Creates a new [`Position`].
     #[must_use]
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
@@ -30,6 +37,7 @@ impl Position {
 }
 
 impl From<Position> for Vec<f32> {
+    /// Converts a [`Position`] to a [`Vec`] of three [`f32`]s.
     fn from(value: Position) -> Vec<f32> {
         vec![value.x, value.y, value.z]
     }
@@ -38,6 +46,7 @@ impl From<Position> for Vec<f32> {
 impl TryFrom<Vec<f32>> for Position {
     type Error = Error;
 
+    /// Converts a [`Vec`] of three [`f32`]s to a [`Position`].
     fn try_from(value: Vec<f32>) -> std::result::Result<Self, Self::Error> {
         if value.len() != 3 {
             return Err(Self::Error::FromF32(format!(

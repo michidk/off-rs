@@ -19,8 +19,8 @@
 
 #![no_main]
 use libfuzzer_sys::fuzz_target;
-use off_rs::mesh::ParserOptions;
 use off_rs::geometry::ColorFormat;
+use off_rs::off_rs::parserOptions;
 use off_rs::parser::Parser;
 
 // Creates a new fuzz case which accepts random bytes as input.

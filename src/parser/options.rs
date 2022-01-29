@@ -1,5 +1,14 @@
 use super::color_format::ColorFormat;
 
+/// Defines the options for the [`Parser`](`crate::parser::Parser`).
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
+pub struct Options {
+    /// The color format that is parsed from the `off` string.
+    pub color_format: ColorFormat,
+    /// The limits that are checked while parsing the `off` string.
+    pub limits: Limits,
+}
+
 /// Defines limits for the [`Parser`](`crate::parser::Parser`).
 ///
 /// # Note
@@ -28,10 +37,11 @@ pub struct Limits {
 }
 
 impl Default for Limits {
+    /// Creates a new [`Limits`] with reasonable values.
     fn default() -> Self {
         Self {
-            vertex_count: 2048,
-            face_count: 4096,
+            vertex_count: 10000,
+            face_count: 1000,
             face_vertex_count: 64,
         }
     }
@@ -51,10 +61,4 @@ impl Limits {
         face_count: usize::MIN,
         face_vertex_count: usize::MIN,
     };
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Default)]
-pub struct Options {
-    pub color_format: ColorFormat,
-    pub limits: Limits,
 }

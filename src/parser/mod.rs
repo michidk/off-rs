@@ -19,6 +19,7 @@ use self::{
 
 pub type Result<T = ()> = std::result::Result<T, Error>;
 
+/// Parses a [`crate::geometry::mesh::Mesh`] from a `off` string.
 #[derive(Debug, Clone)]
 pub struct Parser<'a> {
     lines: OffLines<'a>,
@@ -31,6 +32,7 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    /// Creates a new [`Parser`] from a `off` string.
     pub fn new<S: AsRef<str>>(s: &'a S, options: Options) -> Self {
         let lines = OffLines::new(s.as_ref());
 
@@ -45,6 +47,11 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Parses the `off` string and returns a [`Result`] containing the [`crate::geometry::mesh::Mesh`] or an [`Error`].
+    ///
+    /// # Errors
+    ///
+    /// Will return `Error` if an error occurs while parsing the `off` data.
     pub fn parse(mut self) -> crate::Result {
         self.parse_header()?;
         self.parse_counts()?;
@@ -54,6 +61,7 @@ impl<'a> Parser<'a> {
         Ok(self.finalize())
     }
 
+    /// Progress to the next line.
     fn next_line(&mut self) -> Option<(usize, &'a str)> {
         let (line_index, line) = self.lines.next()?;
 
@@ -62,6 +70,7 @@ impl<'a> Parser<'a> {
         Some((line_index, line))
     }
 
+    /// Parses the header of the `off` string.
     fn parse_header(&mut self) -> Result {
         let (line_index, line) = self
             .next_line()
@@ -78,6 +87,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
+    /// Parses the counts of the `off` string.
     fn parse_counts(&mut self) -> Result {
         let (line_index, line) = self.next_line().ok_or_else(|| {
             Error::with_message(Kind::Missing, self.prev_line_index + 1, "No counts present")
@@ -85,7 +95,7 @@ impl<'a> Parser<'a> {
 
         let counts: Vec<&str> = line.split_line();
 
-        let num: Vec<usize> = counts.convert_vec().map_err(|err| {
+        let num: Vec<usize> = counts.parse_string_to().map_err(|err| {
             Error::with_message(
                 Kind::InvalidCounts,
                 line_index,
@@ -141,6 +151,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
+    /// Parses the vertices of the `off` string.
     fn parse_vertices(&mut self) -> Result {
         for _ in 0..self.vertex_count {
             let (line_index, line) = self.next_line().ok_or_else(|| {
@@ -159,6 +170,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
+    /// Parses a vertex from a `off` string.
     fn parse_vertex(&mut self, line_index: usize, parts: &[&str]) -> Result<Vertex> {
         if parts.len() < 3 {
             return Err(Error::with_message(
@@ -182,6 +194,7 @@ impl<'a> Parser<'a> {
         Ok(Vertex { position, color })
     }
 
+    /// Parses a position from a `off` string.
     fn parse_position(line_index: usize, parts: &[&str]) -> Result<Position> {
         if parts.len() != 3 {
             return Err(Error::with_message(
@@ -216,14 +229,15 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses a color from a `off` string.
     fn parse_color(&mut self, line_index: usize, parts: &[&str]) -> Result<Color> {
-        if parts.len() != self.options.color_format.element_count() {
+        if parts.len() != self.options.color_format.channel_count() {
             return Err(Error::with_message(
                 Kind::InvalidColor,
                 line_index,
                 format!(
                     "Invalid number of color elements given (expected: {}, actual: {})",
-                    self.options.color_format.element_count(),
+                    self.options.color_format.channel_count(),
                     parts.len()
                 ),
             ));
@@ -276,6 +290,7 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Parses the faces of the `off` string.
     fn parse_faces(&mut self) -> Result {
         for _ in 0..self.face_count {
             let (line_index, line) = self.next_line().ok_or_else(|| {
@@ -294,6 +309,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
+    /// Parses a face from a `off` string.
     fn parse_face(&mut self, line_index: usize, mut parts: &[&str]) -> Result<Face> {
         if parts.len() < 4 {
             return Err(Error::with_message(
@@ -375,6 +391,7 @@ impl<'a> Parser<'a> {
         Ok(Face { vertices, color })
     }
 
+    /// Parses the face vertex indices from a line.
     fn parse_face_indices(
         line_index: usize,
         vertex_count: usize,
@@ -409,6 +426,7 @@ impl<'a> Parser<'a> {
         Ok(vertices)
     }
 
+    /// Finalizes the parsing by returning the [`Mesh`].
     fn finalize(self) -> Mesh {
         self.document
     }
@@ -628,10 +646,10 @@ mod tests {
         assert_eq!(
             color.unwrap(),
             Color {
-                r: 1.0,
-                g: 0.5,
-                b: 0.3,
-                a: 1.0,
+                red: 1.0,
+                green: 0.5,
+                blue: 0.3,
+                alpha: 1.0,
             }
         );
     }
@@ -650,10 +668,10 @@ mod tests {
         assert_eq!(
             color.unwrap(),
             Color {
-                r: 1.0,
-                g: 0.5,
-                b: 0.3,
-                a: 0.5,
+                red: 1.0,
+                green: 0.5,
+                blue: 0.3,
+                alpha: 0.5,
             }
         );
     }
@@ -672,10 +690,10 @@ mod tests {
         assert_eq!(
             color.unwrap(),
             Color {
-                r: 1.0,
-                g: 0.501_960_8,
-                b: 0.0,
-                a: 1.0,
+                red: 1.0,
+                green: 0.501_960_8,
+                blue: 0.0,
+                alpha: 1.0,
             }
         );
     }
@@ -714,10 +732,10 @@ mod tests {
         assert_eq!(
             color.unwrap(),
             Color {
-                r: 1.0,
-                g: 0.501_960_8,
-                b: 0.0,
-                a: 1.0,
+                red: 1.0,
+                green: 0.501_960_8,
+                blue: 0.0,
+                alpha: 1.0,
             }
         );
     }
@@ -757,20 +775,20 @@ mod tests {
         assert!(
             parser.document.faces[0].color
                 == Some(Color {
-                    r: 0.1,
-                    g: 0.2,
-                    b: 0.3,
-                    a: 1.0,
+                    red: 0.1,
+                    green: 0.2,
+                    blue: 0.3,
+                    alpha: 1.0,
                 })
         );
         assert!(parser.document.faces[1].vertices == vec![3, 2, 1]);
         assert!(
             parser.document.faces[1].color
                 == Some(Color {
-                    r: 0.2,
-                    g: 0.3,
-                    b: 0.4,
-                    a: 1.0,
+                    red: 0.2,
+                    green: 0.3,
+                    blue: 0.4,
+                    alpha: 1.0,
                 })
         );
     }
@@ -856,10 +874,10 @@ mod tests {
             Face {
                 vertices: vec![1, 2, 3],
                 color: Some(Color {
-                    r: 0.1,
-                    g: 0.2,
-                    b: 0.3,
-                    a: 0.4
+                    red: 0.1,
+                    green: 0.2,
+                    blue: 0.3,
+                    alpha: 0.4
                 })
             }
         );
@@ -895,10 +913,10 @@ mod tests {
             Face {
                 vertices: vec![1, 2, 3],
                 color: Some(Color {
-                    r: 0.1,
-                    g: 0.2,
-                    b: 0.3,
-                    a: 1.0
+                    red: 0.1,
+                    green: 0.2,
+                    blue: 0.3,
+                    alpha: 1.0
                 })
             }
         );

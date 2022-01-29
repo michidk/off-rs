@@ -5,12 +5,30 @@ use off_rs::{
         position::Position,
     },
     parser::{color_format::ColorFormat, options::Options},
-    Parse,
 };
 
 #[test]
+fn short_example() {
+    let off_string = r#"
+OFF
+3 1
+1.0 0.0 0.0
+0.0 1.0 0.0
+0.0 0.0 1.0
+4  0 1 2 3  1.0 0.0 0.0 1.0 # red
+"#;
+
+    let mesh = off_rs::parse(
+        off_string,
+        Default::default(), // optional ParserOptions
+    );
+
+    println!("{:#?}", mesh);
+}
+
+#[test]
 fn spec_example() {
-    let content = r#"
+    let off_string = r#"
 OFF
 #
 #  cube.off
@@ -38,7 +56,7 @@ OFF
         color_format: ColorFormat::RGBAFloat,
         ..Default::default()
     };
-    let off = Mesh::parse(content, options).unwrap();
+    let off = off_rs::parse(off_string, options).unwrap();
 
     assert_eq!(
         off,
@@ -113,55 +131,55 @@ OFF
                 Face {
                     vertices: vec![0, 1, 2, 3,],
                     color: Some(Color {
-                        r: 1.0,
-                        g: 0.0,
-                        b: 0.0,
-                        a: 0.75,
+                        red: 1.0,
+                        green: 0.0,
+                        blue: 0.0,
+                        alpha: 0.75,
                     },),
                 },
                 Face {
                     vertices: vec![7, 4, 0, 3,],
                     color: Some(Color {
-                        r: 0.3,
-                        g: 0.4,
-                        b: 0.0,
-                        a: 0.75,
+                        red: 0.3,
+                        green: 0.4,
+                        blue: 0.0,
+                        alpha: 0.75,
                     },),
                 },
                 Face {
                     vertices: vec![4, 5, 1, 0,],
                     color: Some(Color {
-                        r: 0.2,
-                        g: 0.5,
-                        b: 0.1,
-                        a: 0.75,
+                        red: 0.2,
+                        green: 0.5,
+                        blue: 0.1,
+                        alpha: 0.75,
                     },),
                 },
                 Face {
                     vertices: vec![5, 6, 2, 1,],
                     color: Some(Color {
-                        r: 0.1,
-                        g: 0.6,
-                        b: 0.2,
-                        a: 0.75,
+                        red: 0.1,
+                        green: 0.6,
+                        blue: 0.2,
+                        alpha: 0.75,
                     },),
                 },
                 Face {
                     vertices: vec![3, 2, 6, 7,],
                     color: Some(Color {
-                        r: 0.0,
-                        g: 0.7,
-                        b: 0.3,
-                        a: 0.75,
+                        red: 0.0,
+                        green: 0.7,
+                        blue: 0.3,
+                        alpha: 0.75,
                     },),
                 },
                 Face {
                     vertices: vec![6, 5, 4, 7,],
                     color: Some(Color {
-                        r: 0.0,
-                        g: 1.0,
-                        b: 0.0,
-                        a: 0.75,
+                        red: 0.0,
+                        green: 1.0,
+                        blue: 0.0,
+                        alpha: 0.75,
                     },),
                 },
             ],
@@ -171,7 +189,7 @@ OFF
 
 #[test]
 fn wiki_example() {
-    let content = r#"
+    let off_string = r#"
 OFF
 # cube.off
 # A cube
@@ -197,7 +215,7 @@ OFF
         color_format: ColorFormat::RGBInteger,
         ..Default::default()
     };
-    let off = Mesh::parse(content, options).unwrap();
+    let off = off_rs::parse(off_string, options).unwrap();
 
     assert_eq!(
         off,
@@ -272,55 +290,55 @@ OFF
                 Face {
                     vertices: vec![0, 1, 2, 3,],
                     color: Some(Color {
-                        r: 1.0,
-                        g: 0.0,
-                        b: 0.0,
-                        a: 1.0,
+                        red: 1.0,
+                        green: 0.0,
+                        blue: 0.0,
+                        alpha: 1.0,
                     },),
                 },
                 Face {
                     vertices: vec![7, 4, 0, 3,],
                     color: Some(Color {
-                        r: 0.0,
-                        g: 1.0,
-                        b: 0.0,
-                        a: 1.0,
+                        red: 0.0,
+                        green: 1.0,
+                        blue: 0.0,
+                        alpha: 1.0,
                     },),
                 },
                 Face {
                     vertices: vec![4, 5, 1, 0,],
                     color: Some(Color {
-                        r: 0.0,
-                        g: 0.0,
-                        b: 1.0,
-                        a: 1.0,
+                        red: 0.0,
+                        green: 0.0,
+                        blue: 1.0,
+                        alpha: 1.0,
                     },),
                 },
                 Face {
                     vertices: vec![5, 6, 2, 1,],
                     color: Some(Color {
-                        r: 0.0,
-                        g: 1.0,
-                        b: 0.0,
-                        a: 1.0,
+                        red: 0.0,
+                        green: 1.0,
+                        blue: 0.0,
+                        alpha: 1.0,
                     },),
                 },
                 Face {
                     vertices: vec![3, 2, 6, 7,],
                     color: Some(Color {
-                        r: 0.0,
-                        g: 0.0,
-                        b: 1.0,
-                        a: 1.0,
+                        red: 0.0,
+                        green: 0.0,
+                        blue: 1.0,
+                        alpha: 1.0,
                     },),
                 },
                 Face {
                     vertices: vec![6, 5, 4, 7,],
                     color: Some(Color {
-                        r: 1.0,
-                        g: 0.0,
-                        b: 0.0,
-                        a: 1.0,
+                        red: 1.0,
+                        green: 0.0,
+                        blue: 0.0,
+                        alpha: 1.0,
                     },),
                 },
             ],
@@ -330,7 +348,7 @@ OFF
 
 #[test]
 fn cube() {
-    let content = r#"
+    let off_string = r#"
 OFF
 8 6 0
 -0.500000 -0.500000 0.500000
@@ -349,7 +367,7 @@ OFF
 4 6 0 2 4
 "#;
 
-    let off = Mesh::parse(content, Default::default()).unwrap();
+    let off = off_rs::parse(off_string, Default::default()).unwrap();
     assert_eq!(
         off,
         Mesh {
@@ -451,7 +469,7 @@ OFF
 
 #[test]
 fn vertex_colors() {
-    let content = r#"
+    let off_string = r#"
 OFF
 3 1 0
 -0.500000 -0.500000 0.500000 12 122 210
@@ -460,8 +478,8 @@ OFF
 3 0 1 2
 "#;
 
-    let off = Mesh::parse(
-        content,
+    let off = off_rs::parse(
+        off_string,
         Options {
             color_format: ColorFormat::RGBInteger,
             ..Default::default()
@@ -481,10 +499,10 @@ OFF
                         z: 0.5,
                     },
                     color: Some(Color {
-                        r: 0.047058824,
-                        g: 0.47843137,
-                        b: 0.8235294,
-                        a: 1.0,
+                        red: 0.047058824,
+                        green: 0.47843137,
+                        blue: 0.8235294,
+                        alpha: 1.0,
                     },),
                 },
                 Vertex {
@@ -494,10 +512,10 @@ OFF
                         z: 0.5,
                     },
                     color: Some(Color {
-                        r: 0.13333334,
-                        g: 0.09019608,
-                        b: 0.4392157,
-                        a: 1.0,
+                        red: 0.13333334,
+                        green: 0.09019608,
+                        blue: 0.4392157,
+                        alpha: 1.0,
                     },),
                 },
                 Vertex {
@@ -507,10 +525,10 @@ OFF
                         z: 0.5,
                     },
                     color: Some(Color {
-                        r: 0.48235294,
-                        g: 0.047058824,
-                        b: 0.17254902,
-                        a: 1.0,
+                        red: 0.48235294,
+                        green: 0.047058824,
+                        blue: 0.17254902,
+                        alpha: 1.0,
                     },),
                 },
             ],

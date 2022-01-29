@@ -1,12 +1,11 @@
 use off_rs::{
-    geometry::mesh::Mesh,
     parser::{color_format::ColorFormat, options::Options},
-    Error, Parse,
+    Error,
 };
 
 #[test]
 fn missing_vertex_color() {
-    let content = r#"
+    let off_string = r#"
 OFF
 3 1 0
 -0.500000 -0.500000 0.500000 12 122 210
@@ -15,8 +14,8 @@ OFF
 3 0 1 2
 "#;
 
-    let off = Mesh::parse(
-        content,
+    let off = off_rs::parse(
+        off_string,
         Options {
             color_format: ColorFormat::RGBInteger,
             ..Default::default()

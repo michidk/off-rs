@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 
+/// Contains errors that occur while converting a color from or to a different format.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Error {
     FromF32(String),
@@ -19,45 +20,58 @@ impl Display for Error {
 
 impl std::error::Error for Error {}
 
+/// A color stored as four [`f32`] values (red, green, blue, alpha) ranging from 0.0 to 1.0.
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Color {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
-    pub a: f32,
+    pub red: f32,
+    pub green: f32,
+    pub blue: f32,
+    pub alpha: f32,
 }
 
 impl Color {
-    pub fn new(r: f32, g: f32, b: f32, a: f32) -> Result<Self, Error> {
-        if !(0.0..=1.0).contains(&r)
-            || !(0.0..=1.0).contains(&g)
-            || !(0.0..=1.0).contains(&b)
-            || !(0.0..=1.0).contains(&a)
+    /// Creates a new [`Color`] from the given `red`, `green`, `blue` and `alpha` values and checks for validity.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`Error::FromF32`] of the color values are not between 0.0 and 1.0
+    pub fn new(red: f32, green: f32, blue: f32, alpha: f32) -> Result<Self, Error> {
+        if !(0.0..=1.0).contains(&red)
+            || !(0.0..=1.0).contains(&green)
+            || !(0.0..=1.0).contains(&blue)
+            || !(0.0..=1.0).contains(&alpha)
         {
             Err(Error::FromF32(format!(
                 "Color values must be between 0.0 and 1.0, got: ({}, {}, {}, {})",
-                r, g, b, a
+                red, green, blue, alpha
             )))
         } else {
-            Ok(Self { r, g, b, a })
+            Ok(Self {
+                red,
+                green,
+                blue,
+                alpha,
+            })
         }
     }
 }
 
 impl Default for Color {
+    /// Returns the color white.
     fn default() -> Self {
         Self {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-            a: 1.0,
+            red: 1.0,
+            green: 1.0,
+            blue: 1.0,
+            alpha: 1.0,
         }
     }
 }
 
 impl From<Color> for Vec<f32> {
+    /// Converts a [`Color`] to a [`Vec`] of four [`f32`] values.
     fn from(value: Color) -> Vec<f32> {
-        vec![value.r, value.g, value.b, value.a]
+        vec![value.red, value.green, value.blue, value.alpha]
     }
 }
 
@@ -65,11 +79,16 @@ impl From<Color> for Vec<f32> {
 impl TryFrom<Color> for Vec<u8> {
     type Error = Error;
 
+    /// Converts a [`Color`] to a [`Vec<u8>`]
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::ToU8`] if the elements of [`Color`] are not in the range of 0.0 to 1.0.
     fn try_from(value: Color) -> Result<Vec<u8>, Error> {
-        if !(0.0..=1.0).contains(&value.r)
-            || !(0.0..=1.0).contains(&value.g)
-            || !(0.0..=1.0).contains(&value.b)
-            || !(0.0..=1.0).contains(&value.a)
+        if !(0.0..=1.0).contains(&value.red)
+            || !(0.0..=1.0).contains(&value.green)
+            || !(0.0..=1.0).contains(&value.blue)
+            || !(0.0..=1.0).contains(&value.alpha)
         {
             return Err(Error::ToU8(format!(
                 "Color values must be between 0.0 and 1.0, got: {:?}",
@@ -78,10 +97,10 @@ impl TryFrom<Color> for Vec<u8> {
         }
 
         Ok(vec![
-            (value.r * 255.0).round() as u8,
-            (value.g * 255.0).round() as u8,
-            (value.b * 255.0).round() as u8,
-            (value.a * 255.0).round() as u8,
+            (value.red * 255.0).round() as u8,
+            (value.green * 255.0).round() as u8,
+            (value.blue * 255.0).round() as u8,
+            (value.alpha * 255.0).round() as u8,
         ])
     }
 }
@@ -89,6 +108,11 @@ impl TryFrom<Color> for Vec<u8> {
 impl TryFrom<Vec<f32>> for Color {
     type Error = Error;
 
+    /// Converts a [`Vec<f32>`] to a [`Color`]
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::FromF32`] if `value` contains less than three or more than four elements.
     fn try_from(value: Vec<f32>) -> std::result::Result<Self, Self::Error> {
         if 3 > value.len() || 4 < value.len() {
             return Err(Self::Error::FromF32(format!(
@@ -106,6 +130,11 @@ impl TryFrom<Vec<f32>> for Color {
 impl TryFrom<Vec<u8>> for Color {
     type Error = Error;
 
+    /// Converts a [`Vec<u8>`] to a [`Color`]
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::FromU8`] if `value` contains less than four or more than four elements or if the elements are not in the range of 0 to 255.
     fn try_from(value: Vec<u8>) -> std::result::Result<Self, Self::Error> {
         if 3 > value.len() || 4 < value.len() {
             return Err(Self::Error::FromU8(format!(
@@ -122,7 +151,7 @@ impl TryFrom<Vec<u8>> for Color {
             || !(0..=255).contains(&val[2])
             || !(0..=255).contains(&val[3])
         {
-            return Err(Error::ToU8(format!(
+            return Err(Error::FromU8(format!(
                 "Color values must be between 0 and 255, got: {:?}",
                 val
             )));
@@ -145,10 +174,10 @@ mod tests {
     #[allow(clippy::float_cmp)]
     fn color() {
         let color = Color::new(0.1, 0.2, 0.3, 0.4).unwrap();
-        assert_eq!(color.r, 0.1);
-        assert_eq!(color.g, 0.2);
-        assert_eq!(color.b, 0.3);
-        assert_eq!(color.a, 0.4);
+        assert_eq!(color.red, 0.1);
+        assert_eq!(color.green, 0.2);
+        assert_eq!(color.blue, 0.3);
+        assert_eq!(color.alpha, 0.4);
     }
 
     #[test]
@@ -172,10 +201,10 @@ mod tests {
     #[test]
     fn color_from_u8_fail() {
         let color = Color {
-            r: 1.0,
-            g: 2.0,
-            b: 3.0,
-            a: 4.0,
+            red: 1.0,
+            green: 2.0,
+            blue: 3.0,
+            alpha: 4.0,
         };
         assert!(matches!(Vec::<u8>::try_from(color), Err(Error::ToU8(_))));
     }
