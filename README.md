@@ -2,7 +2,6 @@
 
 [![Apache 2.0 License](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)](http://www.apache.org/licenses/LICENSE-2.0)
 [![MIT License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](http://opensource.org/licenses/MIT)
-[![Issues](https://img.shields.io/github/issues/michidk/off-rs?style=for-the-badge)](https://github.com/michidk/off-rs/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc)
 [![Continuous integration](https://img.shields.io/github/workflow/status/michidk/off-rs/Continuous%20Integration?style=for-the-badge)](https://github.com/michidk/off-rs/actions)
 [![docs.rs](https://img.shields.io/docsrs/off-rs?style=for-the-badge)](https://docs.rs/off-rs)
 [![Crates.io](https://img.shields.io/crates/v/off-rs?style=for-the-badge)](https://crates.io/crates/off-rs)
@@ -45,7 +44,7 @@ This [cube.off](examples/cube.off) file is parsed using `off-rs` [in this exampl
 ## Usage
 
 ```rust
-    let off_string = r#"
+let off_string = r#"
 OFF
 3 1
 1.0 0.0 0.0
