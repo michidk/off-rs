@@ -1,56 +1,106 @@
 use std::{
     borrow::Cow,
+    error::Error as StdError,
     fmt::{Debug, Display, Formatter},
+    hash::{Hash, Hasher},
+    sync::Arc,
 };
 
+/// A plain message used as the [`source`](StdError::source) of an [`Error`] that has no underlying error.
+#[derive(Debug)]
+struct Message(Cow<'static, str>);
+
+impl Display for Message {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.write_str(&self.0)
+    }
+}
+
+impl StdError for Message {}
+
 /// An error that occured while parsing the `off` string line by line.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+///
+/// The details of what went wrong are available through [`source`](StdError::source).
+/// They are deliberately not part of the [`Display`] output, so that error reporters
+/// walking the chain do not print them twice.
+///
+/// Two errors are equal if they have the same [`Kind`], line and rendered source.
+#[derive(Debug, Clone)]
 pub struct Error {
     /// The [`Kind`] of the error.
     pub kind: Kind,
     /// The line number in the `off` string where the error occured.
     pub line_index: usize,
-    /// An error message describing the problem.
-    pub message: Option<Cow<'static, str>>,
+    /// The underlying error or message describing the problem.
+    source: Option<Arc<dyn StdError + Send + Sync + 'static>>,
 }
 
 impl Error {
-    /// Creates a new [`Error`] with the given [`Kind`], line number and optionally a message.
+    /// Creates a new [`Error`] with the given [`Kind`] and line number and a string as message.
     #[must_use]
-    pub(crate) fn new(kind: Kind, line_index: usize, message: Option<Cow<'static, str>>) -> Self {
+    pub(crate) fn with_message<M: Into<Cow<'static, str>>>(
+        kind: Kind,
+        line_index: usize,
+        message: M,
+    ) -> Self {
+        Self::with_source(kind, line_index, Message(message.into()))
+    }
+
+    /// Creates a new [`Error`] with the given [`Kind`] and line number caused by the given error.
+    #[must_use]
+    pub(crate) fn with_source<E: StdError + Send + Sync + 'static>(
+        kind: Kind,
+        line_index: usize,
+        source: E,
+    ) -> Self {
         Self {
             kind,
             line_index,
-            message,
+            source: Some(Arc::new(source)),
         }
-    }
-
-    /// Creates a new [`Error`] with the given [`Kind`] and line numbber and a string as message.
-    #[must_use]
-    pub(crate) fn with_message<M: Into<Cow<'static, str>>, O: Into<Option<M>>>(
-        kind: Kind,
-        line_index: usize,
-        message: O,
-    ) -> Self {
-        Self::new(kind, line_index, message.into().map(Into::into))
     }
 
     /// Creates a new [`Error`] with the given [`Kind`] and line number.
     #[must_use]
     pub(crate) fn without_message(kind: Kind, line_index: usize) -> Self {
-        Self::new(kind, line_index, None)
+        Self {
+            kind,
+            line_index,
+            source: None,
+        }
     }
 }
 
-impl std::error::Error for Error {}
+impl StdError for Error {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        self.source
+            .as_deref()
+            .map(|e| e as &(dyn StdError + 'static))
+    }
+}
+
+impl PartialEq for Error {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind
+            && self.line_index == other.line_index
+            && self.source.as_ref().map(ToString::to_string)
+                == other.source.as_ref().map(ToString::to_string)
+    }
+}
+
+impl Eq for Error {}
+
+impl Hash for Error {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.kind.hash(state);
+        self.line_index.hash(state);
+        self.source.as_ref().map(ToString::to_string).hash(state);
+    }
+}
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        if let Some(msg) = &self.message {
-            write!(f, "{} @ ln:{} - {}", self.kind, self.line_index + 1, msg)
-        } else {
-            write!(f, "{} @ ln:{}", self.kind, self.line_index + 1)
-        }
+        write!(f, "{} @ ln:{}", self.kind, self.line_index + 1)
     }
 }
 
@@ -79,5 +129,56 @@ pub enum Kind {
 impl Display for Kind {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         Debug::fmt(self, f)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn source_returns_message() {
+        let error = Error::with_message(Kind::InvalidHeader, 0, "something went wrong");
+        assert_eq!(
+            error.source().map(ToString::to_string),
+            Some("something went wrong".to_string())
+        );
+    }
+
+    #[test]
+    fn source_returns_underlying_error() {
+        let cause = "x".parse::<u8>().unwrap_err();
+        let error = Error::with_source(Kind::InvalidCounts, 2, cause.clone());
+        assert_eq!(
+            error.source().map(ToString::to_string),
+            Some(cause.to_string())
+        );
+    }
+
+    #[test]
+    fn source_without_message() {
+        assert!(Error::without_message(Kind::Empty, 0).source().is_none());
+    }
+
+    #[test]
+    fn display_excludes_source() {
+        let error = Error::with_message(Kind::InvalidHeader, 4, "details");
+        assert_eq!(error.to_string(), "InvalidHeader @ ln:5");
+    }
+
+    #[test]
+    fn equality_and_hash_consider_source() {
+        let a = Error::with_message(Kind::Missing, 1, "a");
+        let same = Error::with_message(Kind::Missing, 1, String::from("a"));
+        let other = Error::with_message(Kind::Missing, 1, "b");
+
+        assert_eq!(a, same);
+        assert_ne!(a, other);
+        assert_ne!(a, Error::without_message(Kind::Missing, 1));
+        assert_eq!(a.clone(), a);
+
+        let set: HashSet<_> = [a, same, other].into_iter().collect();
+        assert_eq!(set.len(), 2);
     }
 }

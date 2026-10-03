@@ -27,7 +27,22 @@ OFF
         Error::ParserError(off_rs::parser::error::Error {
             kind: off_rs::parser::error::Kind::InvalidColor,
             line_index: 4,
-            message: _
+            ..
         })
     ));
+}
+
+#[test]
+fn error_chain_is_reachable() {
+    use std::error::Error as _;
+
+    let off = off_rs::parse("OFF\n1 0\n1.0 x 3.0\n", Options::default());
+    let error = off.unwrap_err();
+
+    // `off_rs::Error` -> `parser::error::Error` -> `ParseFloatError`
+    let parser_error = error.source().expect("parser error");
+    assert_eq!(parser_error.to_string(), "InvalidVertexPosition @ ln:3");
+
+    let cause = parser_error.source().expect("underlying cause");
+    assert_eq!(cause.to_string(), "invalid float literal");
 }

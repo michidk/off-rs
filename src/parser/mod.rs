@@ -95,13 +95,12 @@ impl<'a> Parser<'a> {
 
         let counts: Vec<&str> = line.split_line();
 
-        let num: Vec<usize> = counts.parse_string_to().map_err(|err| {
-            Error::with_message(
-                Kind::InvalidCounts,
-                line_index,
-                format!("Failed to parse count as number ({err})"),
-            )
-        })?;
+        let num: Vec<usize> =
+            counts
+                .parse_string_to()
+                .map_err(|err: std::num::ParseIntError| {
+                    Error::with_source(Kind::InvalidCounts, line_index, err)
+                })?;
 
         match num[..] {
             [vertex_count, face_count, edge_count] => {
@@ -210,34 +209,21 @@ impl<'a> Parser<'a> {
         let position_parts: Vec<f32> = parts
             .iter()
             .map(|s| {
-                s.parse().map_err(|err| {
-                    Error::with_message(
-                        Kind::InvalidVertexPosition,
-                        line_index,
-                        format!("Failed to parse coordinate as number: ({err})"),
-                    )
-                })
+                s.parse::<f32>()
+                    .map_err(|err| Error::with_source(Kind::InvalidVertexPosition, line_index, err))
             })
             .collect::<Result<Vec<f32>>>()?;
 
-        Position::try_from(position_parts).map_err(|err| {
-            Error::with_message(
-                Kind::InvalidVertexPosition,
-                line_index,
-                format!("Failed to parse position: ({err})"),
-            )
-        })
+        Position::try_from(position_parts)
+            .map_err(|err| Error::with_source(Kind::InvalidVertexPosition, line_index, err))
     }
 
     /// Parses a color from a `off` string.
     fn parse_color(&self, line_index: usize, parts: &[&str]) -> Result<Color> {
-        self.options.color_format.parse(parts).map_err(|err| {
-            Error::with_message(
-                Kind::InvalidColor,
-                line_index,
-                format!("Failed to parse color: {err}"),
-            )
-        })
+        self.options
+            .color_format
+            .parse(parts)
+            .map_err(|err| Error::with_source(Kind::InvalidColor, line_index, err))
     }
 
     /// Parses the faces of the `off` string.
@@ -272,12 +258,8 @@ impl<'a> Parser<'a> {
             ));
         }
 
-        let vertex_count: usize = parts[0].parse().map_err(|err| {
-            Error::with_message(
-                Kind::InvalidFace,
-                line_index,
-                format!("Failed to parse vertex count for face definition: {err}"),
-            )
+        let vertex_count: usize = parts[0].parse().map_err(|err: std::num::ParseIntError| {
+            Error::with_source(Kind::InvalidFace, line_index, err)
         })?;
 
         if vertex_count < 3 {
@@ -351,13 +333,8 @@ impl<'a> Parser<'a> {
             .iter()
             .take(vertex_count)
             .map(|s| {
-                s.parse().map_err(|err| {
-                    Error::with_message(
-                        Kind::InvalidFaceIndex,
-                        line_index,
-                        format!("Failed to parse vertex index as number: ({err})"),
-                    )
-                })
+                s.parse::<usize>()
+                    .map_err(|err| Error::with_source(Kind::InvalidFaceIndex, line_index, err))
             })
             .collect::<Result<Vec<usize>>>()?;
 

@@ -39,13 +39,21 @@ pub enum Error {
     ParserError(crate::parser::error::Error),
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::IOError(e) => Some(e),
+            Error::ParserError(e) => Some(e),
+        }
+    }
+}
 
+/// The details are available through [`source`](std::error::Error::source).
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Error::IOError(e) => write!(f, "IO Error: {e}"),
-            Error::ParserError(e) => write!(f, "Parser Error: {e}"),
+            Error::IOError(_) => write!(f, "Failed to read the off file"),
+            Error::ParserError(_) => write!(f, "Failed to parse the off data"),
         }
     }
 }
