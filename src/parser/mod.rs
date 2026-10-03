@@ -171,7 +171,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parses a vertex from a `off` string.
-    fn parse_vertex(&mut self, line_index: usize, parts: &[&str]) -> Result<Vertex> {
+    fn parse_vertex(&self, line_index: usize, parts: &[&str]) -> Result<Vertex> {
         if parts.len() < 3 {
             return Err(Error::with_message(
                 Kind::InvalidVertexPosition,
@@ -230,64 +230,14 @@ impl<'a> Parser<'a> {
     }
 
     /// Parses a color from a `off` string.
-    fn parse_color(&mut self, line_index: usize, parts: &[&str]) -> Result<Color> {
-        if parts.len() != self.options.color_format.channel_count() {
-            return Err(Error::with_message(
+    fn parse_color(&self, line_index: usize, parts: &[&str]) -> Result<Color> {
+        self.options.color_format.parse(parts).map_err(|err| {
+            Error::with_message(
                 Kind::InvalidColor,
                 line_index,
-                format!(
-                    "Invalid number of color elements given (expected: {}, actual: {})",
-                    self.options.color_format.channel_count(),
-                    parts.len()
-                ),
-            ));
-        }
-
-        if self.options.color_format.is_float() {
-            // parse as f32
-            let color_parts = parts
-                .iter()
-                .map(|s| {
-                    s.parse::<f32>().map_err(|err| {
-                        Error::with_message(
-                            Kind::InvalidColor,
-                            line_index,
-                            format!("Failed to parse color as float: {err}"),
-                        )
-                    })
-                })
-                .collect::<Result<Vec<f32>>>()?;
-
-            Color::try_from(color_parts).map_err(|err| {
-                Error::with_message(
-                    Kind::InvalidColor,
-                    line_index,
-                    format!("Failed to parse color: {err}"),
-                )
-            })
-        } else {
-            // parse as u8
-            let color_parts = parts
-                .iter()
-                .map(|s| {
-                    s.parse::<u8>().map_err(|err| {
-                        Error::with_message(
-                            Kind::InvalidColor,
-                            line_index,
-                            format!("Failed to parse color as u8: {err}"),
-                        )
-                    })
-                })
-                .collect::<Result<Vec<u8>>>()?;
-
-            Color::try_from(color_parts).map_err(|err| {
-                Error::with_message(
-                    Kind::InvalidColor,
-                    line_index,
-                    format!("Failed to parse color: {err}"),
-                )
-            })
-        }
+                format!("Failed to parse color: {err}"),
+            )
+        })
     }
 
     /// Parses the faces of the `off` string.
@@ -310,7 +260,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parses a face from a `off` string.
-    fn parse_face(&mut self, line_index: usize, mut parts: &[&str]) -> Result<Face> {
+    fn parse_face(&self, line_index: usize, mut parts: &[&str]) -> Result<Face> {
         if parts.len() < 4 {
             return Err(Error::with_message(
                 Kind::InvalidFace,

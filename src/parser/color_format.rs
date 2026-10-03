@@ -1,3 +1,5 @@
+use crate::geometry::color::{Color, Error};
+
 /// The different color formats that can be parsed.
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum ColorFormat {
@@ -35,6 +37,45 @@ impl ColorFormat {
     pub fn channel_count(&self) -> usize {
         if self.has_alpha() { 4 } else { 3 }
     }
+
+    /// Parses a [`Color`] from the given channel strings according to this format.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::ChannelCount`] if the number of `parts` does not match [`ColorFormat::channel_count`],
+    /// [`Error::Parse`] if a channel is not a valid number for this format,
+    /// or the conversion error of [`Color`] if a channel is out of range.
+    pub fn parse(&self, parts: &[&str]) -> Result<Color, Error> {
+        if parts.len() != self.channel_count() {
+            return Err(Error::ChannelCount(format!(
+                "expected {}, actual: {}",
+                self.channel_count(),
+                parts.len()
+            )));
+        }
+
+        if self.is_float() {
+            let channels = parts
+                .iter()
+                .map(|s| {
+                    s.parse::<f32>()
+                        .map_err(|err| Error::Parse(format!("`{s}` is not a float ({err})")))
+                })
+                .collect::<Result<Vec<f32>, Error>>()?;
+
+            Color::try_from(channels)
+        } else {
+            let channels = parts
+                .iter()
+                .map(|s| {
+                    s.parse::<u8>()
+                        .map_err(|err| Error::Parse(format!("`{s}` is not a u8 ({err})")))
+                })
+                .collect::<Result<Vec<u8>, Error>>()?;
+
+            Color::try_from(channels)
+        }
+    }
 }
 
 impl Default for ColorFormat {
@@ -70,5 +111,66 @@ mod tests {
         assert_eq!(ColorFormat::RGBAFloat.channel_count(), 4);
         assert_eq!(ColorFormat::RGBInteger.channel_count(), 3);
         assert_eq!(ColorFormat::RGBAInteger.channel_count(), 4);
+    }
+
+    #[test]
+    fn parse_float() {
+        assert_eq!(
+            ColorFormat::RGBFloat.parse(&["1.0", "0.5", "0.0"]),
+            Ok(Color::new(1.0, 0.5, 0.0, 1.0).unwrap())
+        );
+        assert_eq!(
+            ColorFormat::RGBAFloat.parse(&["1.0", "0.5", "0.0", "0.25"]),
+            Ok(Color::new(1.0, 0.5, 0.0, 0.25).unwrap())
+        );
+    }
+
+    #[test]
+    fn parse_integer() {
+        assert_eq!(
+            ColorFormat::RGBInteger.parse(&["255", "0", "255"]),
+            Ok(Color::new(1.0, 0.0, 1.0, 1.0).unwrap())
+        );
+        assert_eq!(
+            ColorFormat::RGBAInteger.parse(&["255", "0", "255", "0"]),
+            Ok(Color::new(1.0, 0.0, 1.0, 0.0).unwrap())
+        );
+    }
+
+    #[test]
+    fn parse_wrong_channel_count() {
+        assert!(matches!(
+            ColorFormat::RGBFloat.parse(&["1.0", "0.5"]),
+            Err(Error::ChannelCount(_))
+        ));
+        assert!(matches!(
+            ColorFormat::RGBInteger.parse(&["1", "2", "3", "4"]),
+            Err(Error::ChannelCount(_))
+        ));
+    }
+
+    #[test]
+    fn parse_invalid_number() {
+        assert!(matches!(
+            ColorFormat::RGBFloat.parse(&["1.0", "x", "0.0"]),
+            Err(Error::Parse(_))
+        ));
+        // floats are not valid integer channels
+        assert!(matches!(
+            ColorFormat::RGBInteger.parse(&["255", "128.0", "0"]),
+            Err(Error::Parse(_))
+        ));
+        assert!(matches!(
+            ColorFormat::RGBInteger.parse(&["256", "0", "0"]),
+            Err(Error::Parse(_))
+        ));
+    }
+
+    #[test]
+    fn parse_out_of_range() {
+        assert!(matches!(
+            ColorFormat::RGBFloat.parse(&["2.0", "0.0", "0.0"]),
+            Err(Error::FromF32(_))
+        ));
     }
 }

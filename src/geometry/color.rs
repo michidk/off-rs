@@ -3,6 +3,10 @@ use std::fmt::{Debug, Display, Formatter};
 /// Contains errors that occur while converting a color from or to a different format.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Error {
+    /// The number of channels does not match the expected [`ColorFormat`](crate::parser::color_format::ColorFormat).
+    ChannelCount(String),
+    /// A channel could not be parsed as a number.
+    Parse(String),
     FromF32(String),
     FromU8(String),
     ToU8(String),
@@ -11,6 +15,8 @@ pub enum Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::ChannelCount(msg) => write!(f, "Invalid number of color channels: {msg}"),
+            Self::Parse(msg) => write!(f, "Failed to parse color channel: {msg}"),
             Self::FromF32(msg) => write!(f, "Failed to convert `f32` to `Color`: {msg}"),
             Self::FromU8(msg) => write!(f, "Failed to convert `u8` to `Color`: {msg}"),
             Self::ToU8(msg) => write!(f, "Failed to convert `Color` to `Vec<u8>`: {msg}"),
