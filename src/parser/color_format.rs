@@ -79,7 +79,7 @@ impl ColorFormat {
 }
 
 impl Default for ColorFormat {
-    /// The default color format is [`RGBFloat`].
+    /// The default color format is [`ColorFormat::RGBAFloat`].
     // Because this format is specified in the implementation of the Princeton Shape Benchmark.
     fn default() -> Self {
         ColorFormat::RGBAFloat
