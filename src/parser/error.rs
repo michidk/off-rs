@@ -18,7 +18,7 @@ impl Display for Message {
 
 impl StdError for Message {}
 
-/// An error that occured while parsing the `off` string line by line.
+/// An error that occurred while parsing the `off` string line by line.
 ///
 /// The details of what went wrong are available through [`source`](StdError::source).
 /// They are deliberately not part of the [`Display`] output, so that error reporters
@@ -29,7 +29,7 @@ impl StdError for Message {}
 pub struct Error {
     /// The [`Kind`] of the error.
     pub kind: Kind,
-    /// The line number in the `off` string where the error occured.
+    /// The line number in the `off` string where the error occurred.
     pub line_index: usize,
     /// The underlying error or message describing the problem.
     source: Option<Arc<dyn StdError + Send + Sync + 'static>>,
@@ -122,7 +122,7 @@ pub enum Kind {
     InvalidColor,
     /// The face definition has an invalid format.
     InvalidFace,
-    /// The face indicies have an invalid format.
+    /// The face indices have an invalid format.
     InvalidFaceIndex,
 }
 

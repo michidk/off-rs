@@ -130,7 +130,7 @@ impl<'a> Parser<'a> {
                 Kind::LimitExceeded,
                 line_index,
                 format!(
-                    "Vertext count exceeds limit (limit: {}, actual: {})",
+                    "Vertex count exceeds limit (limit: {}, actual: {})",
                     self.options.limits.vertex_count, self.vertex_count
                 ),
             ));
@@ -252,7 +252,7 @@ impl<'a> Parser<'a> {
                 Kind::InvalidFace,
                 line_index,
                 format!(
-                    "Not enough arguments. At least three vertex indicies required (e.g. `3 1 2 3`). {} arguments given",
+                    "Not enough arguments. At least three vertex indices required (e.g. `3 1 2 3`). {} arguments given",
                     parts.len()
                 ),
             ));
@@ -360,7 +360,6 @@ impl<'a> Parser<'a> {
 }
 
 #[cfg(test)]
-#[allow(unused)]
 mod tests {
 
     use crate::parser::color_format::ColorFormat;
@@ -481,7 +480,7 @@ mod tests {
 
     #[test]
     fn parse_vertex() {
-        let mut parser = Parser::new(&"", Options::default());
+        let parser = Parser::new(&"", Options::default());
 
         let vertex = parser.parse_vertex(0, &["1.0", "2.0", "3.0"]);
         assert!(vertex.is_ok());
@@ -493,7 +492,7 @@ mod tests {
 
     #[test]
     fn parse_vertex_too_few_parts() {
-        let mut parser = Parser::new(&"", Options::default());
+        let parser = Parser::new(&"", Options::default());
 
         let vertex = parser.parse_vertex(0, &["1.0", "2.0"]);
         assert!(vertex.is_err());
@@ -561,7 +560,7 @@ mod tests {
 
     #[test]
     fn parse_color_rgbfloat() {
-        let mut parser = Parser::new(
+        let parser = Parser::new(
             &"",
             Options {
                 color_format: ColorFormat::RGBFloat,
@@ -583,7 +582,7 @@ mod tests {
 
     #[test]
     fn parse_color_rgbafloat() {
-        let mut parser = Parser::new(
+        let parser = Parser::new(
             &"",
             Options {
                 color_format: ColorFormat::RGBAFloat,
@@ -605,7 +604,7 @@ mod tests {
 
     #[test]
     fn parse_color_rgbinterger() {
-        let mut parser = Parser::new(
+        let parser = Parser::new(
             &"",
             Options {
                 color_format: ColorFormat::RGBInteger,
@@ -627,7 +626,7 @@ mod tests {
 
     #[test]
     fn parse_color_rgbinterger_fail() {
-        let mut parser = Parser::new(
+        let parser = Parser::new(
             &"",
             Options {
                 color_format: ColorFormat::RGBInteger,
@@ -647,7 +646,7 @@ mod tests {
 
     #[test]
     fn parse_color_rgbainterger() {
-        let mut parser = Parser::new(
+        let parser = Parser::new(
             &"",
             Options {
                 color_format: ColorFormat::RGBAInteger,
@@ -669,7 +668,7 @@ mod tests {
 
     #[test]
     fn parse_color_element_count() {
-        let mut parser = Parser::new(
+        let parser = Parser::new(
             &"",
             Options {
                 color_format: ColorFormat::RGBFloat,
@@ -722,7 +721,7 @@ mod tests {
 
     #[test]
     fn parse_face() {
-        let mut parser = Parser::new(&"", Options::default());
+        let parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["3", "1", "2", "3"]);
         assert!(result.is_ok());
         assert_eq!(
@@ -736,7 +735,7 @@ mod tests {
 
     #[test]
     fn parse_face_more() {
-        let mut parser = Parser::new(&"", Options::default());
+        let parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["4", "2", "3", "1", "1337"]);
         assert!(result.is_ok());
         assert_eq!(
@@ -750,7 +749,7 @@ mod tests {
 
     #[test]
     fn parse_face_too_little_parts() {
-        let mut parser = Parser::new(&"", Options::default());
+        let parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["6", "1", "2", "3"]);
         assert!(result.is_err());
         assert!(matches!(
@@ -764,7 +763,7 @@ mod tests {
 
     #[test]
     fn parse_face_too_many_parts() {
-        let mut parser = Parser::new(&"", Options::default());
+        let parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["3", "2", "3", "2", "3"]);
         assert!(result.is_err());
         assert!(matches!(
@@ -778,7 +777,7 @@ mod tests {
 
     #[test]
     fn parse_face_no_number() {
-        let mut parser = Parser::new(&"", Options::default());
+        let parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["3", "1", "asdf", "3"]);
         assert!(result.is_err());
         println!("{result:?}");
@@ -793,7 +792,7 @@ mod tests {
 
     #[test]
     fn parse_face_color() {
-        let mut parser = Parser::new(&"", Options::default());
+        let parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["3", "1", "2", "3", "0.1", "0.2", "0.3", "0.4"]);
         assert!(result.is_ok());
         assert_eq!(
@@ -812,7 +811,7 @@ mod tests {
 
     #[test]
     fn parse_face_color_fail() {
-        let mut parser = Parser::new(&"", Options::default());
+        let parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["3", "1", "2", "3", "0.1", "0.2"]);
         assert!(result.is_err());
         assert!(matches!(
@@ -826,7 +825,7 @@ mod tests {
 
     #[test]
     fn parse_face_color_fail_no_alpha() {
-        let mut parser = Parser::new(
+        let parser = Parser::new(
             &"",
             Options {
                 color_format: ColorFormat::RGBFloat,
@@ -851,7 +850,7 @@ mod tests {
 
     #[test]
     fn parse_face_color_fail_no_alpha_fail() {
-        let mut parser = Parser::new(&"", Options::default());
+        let parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["3", "1", "2", "3", "0.1", "0.2", "0.3"]);
         assert!(result.is_err());
         assert!(matches!(

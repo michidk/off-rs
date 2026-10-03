@@ -19,10 +19,10 @@ impl Vertex {
 }
 
 /// Represents a face of a mesh.
-/// A face contains a list of vertex indicies and optionally a color.
+/// A face contains a list of vertex indices and optionally a color.
 #[derive(Clone, PartialEq, Debug, Default)]
 pub struct Face {
-    /// The list of vertex indicies that make up the face.
+    /// The list of vertex indices that make up the face.
     pub vertices: Vec<usize>,
     /// The color of the face.
     pub color: Option<Color>,
@@ -37,7 +37,7 @@ impl Face {
 }
 
 impl From<Face> for Vec<usize> {
-    /// Converts a [`Face`] to a [`Vec<usize>`] containing the vertex indicies.
+    /// Converts a [`Face`] to a [`Vec<usize>`] containing the vertex indices.
     fn from(value: Face) -> Vec<usize> {
         value.vertices
     }
