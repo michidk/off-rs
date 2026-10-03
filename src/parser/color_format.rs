@@ -33,11 +33,7 @@ impl ColorFormat {
     /// Returns the number of channels in the color format.
     #[must_use]
     pub fn channel_count(&self) -> usize {
-        if self.has_alpha() {
-            4
-        } else {
-            3
-        }
+        if self.has_alpha() { 4 } else { 3 }
     }
 }
 

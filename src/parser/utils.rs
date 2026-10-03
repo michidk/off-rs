@@ -9,8 +9,7 @@ impl<'a> StrParts<'a> for &'a str {
     /// Splits a string into a vector of strings at whitespaces and ignores comments.
     fn split_line(self) -> Vec<&'a str> {
         self.split_whitespace()
-            .map_while(|s| (!s.starts_with('#')).then(|| s))
-            // .map_while(|s| (!s.starts_with('#')).then_some(s)); currently still unstable (https://github.com/rust-lang/rust/issues/80967)
+            .map_while(|s| (!s.starts_with('#')).then_some(s))
             .collect()
     }
 }

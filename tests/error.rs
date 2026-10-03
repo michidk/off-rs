@@ -1,6 +1,6 @@
 use off_rs::{
-    parser::{color_format::ColorFormat, options::Options},
     Error,
+    parser::{color_format::ColorFormat, options::Options},
 };
 
 #[test]

@@ -45,11 +45,11 @@ mod tests {
 
     #[test]
     fn iterator() {
-        let str = r#"this
+        let str = r"this
         is
         a
         test
-        "#;
+        ";
 
         let mut lines = OffLines::new(str).peekable();
         assert_eq!(lines.next(), Some((0, "this")));

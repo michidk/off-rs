@@ -11,9 +11,9 @@ pub enum Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::FromF32(msg) => write!(f, "Failed to convert `f32` to `Color`: {}", msg),
-            Self::FromU8(msg) => write!(f, "Failed to convert `u8` to `Color`: {}", msg),
-            Self::ToU8(msg) => write!(f, "Failed to convert `Color` to `Vec<u8>`: {}", msg),
+            Self::FromF32(msg) => write!(f, "Failed to convert `f32` to `Color`: {msg}"),
+            Self::FromU8(msg) => write!(f, "Failed to convert `u8` to `Color`: {msg}"),
+            Self::ToU8(msg) => write!(f, "Failed to convert `Color` to `Vec<u8>`: {msg}"),
         }
     }
 }
@@ -42,8 +42,7 @@ impl Color {
             || !(0.0..=1.0).contains(&alpha)
         {
             Err(Error::FromF32(format!(
-                "Color values must be between 0.0 and 1.0, got: ({}, {}, {}, {})",
-                red, green, blue, alpha
+                "Color values must be between 0.0 and 1.0, got: ({red}, {green}, {blue}, {alpha})"
             )))
         } else {
             Ok(Self {
@@ -91,8 +90,7 @@ impl TryFrom<Color> for Vec<u8> {
             || !(0.0..=1.0).contains(&value.alpha)
         {
             return Err(Error::ToU8(format!(
-                "Color values must be between 0.0 and 1.0, got: {:?}",
-                value
+                "Color values must be between 0.0 and 1.0, got: {value:?}"
             )));
         }
 
@@ -152,8 +150,7 @@ impl TryFrom<Vec<u8>> for Color {
             || !(0..=255).contains(&val[3])
         {
             return Err(Error::FromU8(format!(
-                "Color values must be between 0 and 255, got: {:?}",
-                val
+                "Color values must be between 0 and 255, got: {val:?}"
             )));
         }
 

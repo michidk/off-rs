@@ -9,7 +9,7 @@ pub enum Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::FromF32(msg) => write!(f, "Failed to convert `f32` to `Position`: {}", msg),
+            Self::FromF32(msg) => write!(f, "Failed to convert `f32` to `Position`: {msg}"),
         }
     }
 }

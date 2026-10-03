@@ -49,7 +49,7 @@ impl Display for Error {
         if let Some(msg) = &self.message {
             write!(f, "{} @ ln:{} - {}", self.kind, self.line_index + 1, msg)
         } else {
-            write!(f, "{} @ ln:{}", self.kind, self.line_index + 1,)
+            write!(f, "{} @ ln:{}", self.kind, self.line_index + 1)
         }
     }
 }

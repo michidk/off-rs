@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":enableVulnerabilityAlertsWithLabel('security')"
+  ],
+  "labels": ["no-stale", "bot"],
+  "packageRules": [
+    {
+      "matchManagers": ["cargo"],
+      "groupName": "All Rust Dependencies"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "All GitHub Actions"
+    }
+  ]
+}

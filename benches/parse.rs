@@ -11,10 +11,11 @@
 //! cargo bench parse
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use off_rs::geometry::color_format::ColorFormat;
-use off_rs::parser::options::Options;
+use criterion::{Criterion, criterion_group, criterion_main};
 use off_rs::parser::Parser;
+use off_rs::parser::color_format::ColorFormat;
+use off_rs::parser::options::Options;
+use std::hint::black_box;
 
 /// OFF file from wikipedia.
 const WIKI_OFF: &str = include_str!("resources/wiki.off");

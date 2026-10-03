@@ -24,8 +24,8 @@ pub mod geometry;
 pub mod parser;
 
 use crate::geometry::mesh::Mesh;
-use crate::parser::options::Options;
 use crate::parser::Parser;
+use crate::parser::options::Options;
 use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
@@ -44,8 +44,8 @@ impl std::error::Error for Error {}
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Error::IOError(e) => write!(f, "IO Error: {}", e),
-            Error::ParserError(e) => write!(f, "Parser Error: {}", e),
+            Error::IOError(e) => write!(f, "IO Error: {e}"),
+            Error::ParserError(e) => write!(f, "Parser Error: {e}"),
         }
     }
 }
@@ -77,7 +77,7 @@ pub fn from_path<P: AsRef<Path>>(path: P, options: Options) -> Result {
     match file.read_to_string(&mut string) {
         Ok(_) => {}
         Err(inner) => return Err(Error::IOError(inner)),
-    };
+    }
 
     parse(&string, options)
 }

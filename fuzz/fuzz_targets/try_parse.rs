@@ -19,9 +19,9 @@
 
 #![no_main]
 use libfuzzer_sys::fuzz_target;
-use off_rs::geometry::ColorFormat;
-use off_rs::off_rs::parserOptions;
 use off_rs::parser::Parser;
+use off_rs::parser::color_format::ColorFormat;
+use off_rs::parser::options::Options;
 
 // Creates a new fuzz case which accepts random bytes as input.
 fuzz_target!(|data: &[u8]| {
@@ -29,7 +29,7 @@ fuzz_target!(|data: &[u8]| {
     if let Ok(s) = std::str::from_utf8(data) {
         let _ = Parser::new(
             &s,
-            ParserOptions {
+            Options {
                 color_format: ColorFormat::RGBAFloat,
                 ..Default::default()
             },

@@ -99,7 +99,7 @@ impl<'a> Parser<'a> {
             Error::with_message(
                 Kind::InvalidCounts,
                 line_index,
-                format!("Failed to parse count as number ({})", err),
+                format!("Failed to parse count as number ({err})"),
             )
         })?;
 
@@ -214,7 +214,7 @@ impl<'a> Parser<'a> {
                     Error::with_message(
                         Kind::InvalidVertexPosition,
                         line_index,
-                        format!("Failed to parse coordinate as number: ({})", err),
+                        format!("Failed to parse coordinate as number: ({err})"),
                     )
                 })
             })
@@ -224,7 +224,7 @@ impl<'a> Parser<'a> {
             Error::with_message(
                 Kind::InvalidVertexPosition,
                 line_index,
-                format!("Failed to parse position: ({})", err),
+                format!("Failed to parse position: ({err})"),
             )
         })
     }
@@ -252,7 +252,7 @@ impl<'a> Parser<'a> {
                         Error::with_message(
                             Kind::InvalidColor,
                             line_index,
-                            format!("Failed to parse color as float: {}", err),
+                            format!("Failed to parse color as float: {err}"),
                         )
                     })
                 })
@@ -262,7 +262,7 @@ impl<'a> Parser<'a> {
                 Error::with_message(
                     Kind::InvalidColor,
                     line_index,
-                    format!("Failed to parse color: {}", err),
+                    format!("Failed to parse color: {err}"),
                 )
             })
         } else {
@@ -274,7 +274,7 @@ impl<'a> Parser<'a> {
                         Error::with_message(
                             Kind::InvalidColor,
                             line_index,
-                            format!("Failed to parse color as u8: {}", err),
+                            format!("Failed to parse color as u8: {err}"),
                         )
                     })
                 })
@@ -284,7 +284,7 @@ impl<'a> Parser<'a> {
                 Error::with_message(
                     Kind::InvalidColor,
                     line_index,
-                    format!("Failed to parse color: {}", err),
+                    format!("Failed to parse color: {err}"),
                 )
             })
         }
@@ -315,7 +315,10 @@ impl<'a> Parser<'a> {
             return Err(Error::with_message(
                 Kind::InvalidFace,
                 line_index,
-                format!("Not enough arguments. At least three vertex indicies required (e.g. `3 1 2 3`). {} arguments given", parts.len()),
+                format!(
+                    "Not enough arguments. At least three vertex indicies required (e.g. `3 1 2 3`). {} arguments given",
+                    parts.len()
+                ),
             ));
         }
 
@@ -323,7 +326,7 @@ impl<'a> Parser<'a> {
             Error::with_message(
                 Kind::InvalidFace,
                 line_index,
-                format!("Failed to parse vertex count for face definition: {}", err),
+                format!("Failed to parse vertex count for face definition: {err}"),
             )
         })?;
 
@@ -331,10 +334,7 @@ impl<'a> Parser<'a> {
             return Err(Error::with_message(
                 Kind::InvalidFace,
                 line_index,
-                format!(
-                    "Vertex count should be at least 3 (actual: {})",
-                    vertex_count
-                ),
+                format!("Vertex count should be at least 3 (actual: {vertex_count})"),
             ));
         }
 
@@ -405,7 +405,7 @@ impl<'a> Parser<'a> {
                     Error::with_message(
                         Kind::InvalidFaceIndex,
                         line_index,
-                        format!("Failed to parse vertex index as number: ({})", err),
+                        format!("Failed to parse vertex index as number: ({err})"),
                     )
                 })
             })
@@ -535,20 +535,20 @@ mod tests {
         let result = parser.parse_vertices();
         assert!(result.is_ok());
         assert!(parser.next_line().is_none());
-        assert!(parser.document.vertices.len() == 2);
-        assert!(
-            parser.document.vertices[0]
-                == Vertex::new(
-                    Position::new(3.0, 1.0, 2.0),
-                    Some(Color::new(0.1, 0.2, 0.3, 1.0).unwrap()),
-                )
+        assert_eq!(parser.document.vertices.len(), 2);
+        assert_eq!(
+            parser.document.vertices[0],
+            Vertex::new(
+                Position::new(3.0, 1.0, 2.0),
+                Some(Color::new(0.1, 0.2, 0.3, 1.0).unwrap()),
+            )
         );
-        assert!(
-            parser.document.vertices[1]
-                == Vertex::new(
-                    Position::new(1.0, 2.0, 3.0),
-                    Some(Color::new(0.1, 0.2, 0.3, 1.0).unwrap()),
-                )
+        assert_eq!(
+            parser.document.vertices[1],
+            Vertex::new(
+                Position::new(1.0, 2.0, 3.0),
+                Some(Color::new(0.1, 0.2, 0.3, 1.0).unwrap()),
+            )
         );
     }
 
@@ -770,26 +770,26 @@ mod tests {
         let result = parser.parse_faces();
         assert!(result.is_ok());
         assert!(parser.next_line().is_none());
-        assert!(parser.document.faces.len() == 2);
-        assert!(parser.document.faces[0].vertices == vec![1, 2, 3]);
-        assert!(
-            parser.document.faces[0].color
-                == Some(Color {
-                    red: 0.1,
-                    green: 0.2,
-                    blue: 0.3,
-                    alpha: 1.0,
-                })
+        assert_eq!(parser.document.faces.len(), 2);
+        assert_eq!(parser.document.faces[0].vertices, vec![1, 2, 3]);
+        assert_eq!(
+            parser.document.faces[0].color,
+            Some(Color {
+                red: 0.1,
+                green: 0.2,
+                blue: 0.3,
+                alpha: 1.0,
+            })
         );
-        assert!(parser.document.faces[1].vertices == vec![3, 2, 1]);
-        assert!(
-            parser.document.faces[1].color
-                == Some(Color {
-                    red: 0.2,
-                    green: 0.3,
-                    blue: 0.4,
-                    alpha: 1.0,
-                })
+        assert_eq!(parser.document.faces[1].vertices, vec![3, 2, 1]);
+        assert_eq!(
+            parser.document.faces[1].color,
+            Some(Color {
+                red: 0.2,
+                green: 0.3,
+                blue: 0.4,
+                alpha: 1.0,
+            })
         );
     }
 
@@ -854,7 +854,7 @@ mod tests {
         let mut parser = Parser::new(&"", Options::default());
         let result = parser.parse_face(0, &["3", "1", "asdf", "3"]);
         assert!(result.is_err());
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(matches!(
             result.unwrap_err(),
             Error {
