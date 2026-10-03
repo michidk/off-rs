@@ -76,6 +76,31 @@ impl ColorFormat {
             Color::try_from(channels)
         }
     }
+
+    /// Formats a [`Color`] as space separated channels according to this format, the inverse of [`ColorFormat::parse`].
+    ///
+    /// Formats without an alpha channel drop the alpha value of the [`Color`],
+    /// and integer formats round each channel to the nearest `u8`.
+    ///
+    /// # Errors
+    ///
+    /// Returns the conversion error of [`Color`] if a channel is not between 0.0 and 1.0.
+    pub fn format(&self, color: Color) -> Result<String, Error> {
+        let channels = if self.is_float() {
+            let color = Color::new(color.red, color.green, color.blue, color.alpha)?;
+            vec![color.red, color.green, color.blue, color.alpha]
+                .into_iter()
+                .map(|c| c.to_string())
+                .collect::<Vec<_>>()
+        } else {
+            Vec::<u8>::try_from(color)?
+                .into_iter()
+                .map(|c| c.to_string())
+                .collect()
+        };
+
+        Ok(channels[..self.channel_count()].join(" "))
+    }
 }
 
 impl Default for ColorFormat {
@@ -111,6 +136,55 @@ mod tests {
         assert_eq!(ColorFormat::RGBAFloat.channel_count(), 4);
         assert_eq!(ColorFormat::RGBInteger.channel_count(), 3);
         assert_eq!(ColorFormat::RGBAInteger.channel_count(), 4);
+    }
+
+    #[test]
+    fn format() {
+        let color = Color::new(1.0, 0.5, 0.0, 0.25).unwrap();
+        assert_eq!(ColorFormat::RGBFloat.format(color).unwrap(), "1 0.5 0");
+        assert_eq!(
+            ColorFormat::RGBAFloat.format(color).unwrap(),
+            "1 0.5 0 0.25"
+        );
+        assert_eq!(ColorFormat::RGBInteger.format(color).unwrap(), "255 128 0");
+        assert_eq!(
+            ColorFormat::RGBAInteger.format(color).unwrap(),
+            "255 128 0 64"
+        );
+    }
+
+    #[test]
+    fn format_out_of_range() {
+        let color = Color {
+            red: 2.0,
+            green: 0.0,
+            blue: 0.0,
+            alpha: 1.0,
+        };
+        assert!(ColorFormat::RGBAFloat.format(color).is_err());
+        assert!(ColorFormat::RGBAInteger.format(color).is_err());
+    }
+
+    #[test]
+    fn format_parse_roundtrip() {
+        for format in [
+            ColorFormat::RGBFloat,
+            ColorFormat::RGBAFloat,
+            ColorFormat::RGBInteger,
+            ColorFormat::RGBAInteger,
+        ] {
+            // every integer channel value has to survive the conversion to `f32` and back
+            for value in 0..=255u8 {
+                let text = vec![value.to_string(); format.channel_count()];
+                let parts: Vec<&str> = text.iter().map(String::as_str).collect();
+
+                if format.is_integer() {
+                    let color = format.parse(&parts).unwrap();
+                    let formatted = format.format(color).unwrap();
+                    assert_eq!(formatted.split(' ').collect::<Vec<_>>(), parts);
+                }
+            }
+        }
     }
 
     #[test]
