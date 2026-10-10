@@ -116,6 +116,18 @@ off_rs::to_path(&mesh, "copy.off", Options {
 Colors are written in the configured color format. Formats without an alpha channel drop the alpha value, and integer formats round to the nearest `u8`.
 Meshes that can not be parsed again (faces with less than three vertices or with vertex indices that do not exist) are rejected with an error.
 
+## Releases
+
+The workflows use the shared [Orcastrate templates](https://github.com/michidk/workflows).
+Configure `RELEASE_TOKEN` and crates.io Trusted Publishing using the
+[setup guide](https://github.com/michidk/workflows#rust-releases).
+The Trusted Publisher uses owner `michidk`, repository `off-rs`, workflow
+`publish.yml`, and environment `publish-crates.io`.
+
+Run **Bump Version & Tag** on `main` with the next `X.Y.Z` version. After
+verification, **Release** creates a draft with git-cliff release notes and no
+binary assets. Publishing the draft triggers **Publish to crates.io**.
+
 ## License
 
 Licensed under either of [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0) or [MIT license](http://opensource.org/licenses/MIT) at your option.
