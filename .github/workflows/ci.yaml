@@ -24,7 +24,6 @@ jobs:
   test:
     name: Test Suite
     runs-on: ${{ matrix.os }}
-
     strategy:
       matrix:
         os: ["ubuntu-26.04"]
