@@ -1,5 +1,5 @@
 # @orcastrate
-# template: rust-ci
+# template: rust/ci
 # @end-orcastrate
 
 name: Test & Lint
