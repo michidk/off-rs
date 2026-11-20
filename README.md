@@ -8,6 +8,58 @@
 Parses `.off` ([Object File Format](<https://en.wikipedia.org/wiki/OFF_(file_format)>)) files.
 This implementation follows [this spec](https://people.sc.fsu.edu/~jburkardt/data/off/off.html) from the Princeton Shape Benchmark.
 
+## Usage
+
+Add the library to your Rust project:
+
+```sh
+cargo add off-rs
+```
+
+Parse a triangle from an OFF string:
+
+```rust
+let off_string = r#"
+OFF
+3 1
+1.0 0.0 0.0
+0.0 1.0 0.0
+0.0 0.0 1.0
+3  0 1 2  255 0 0 # red
+"#;
+
+let mesh = off_rs::parse(
+    off_string,
+    Default::default() // optional ParserOptions
+).expect("valid OFF mesh");
+
+println!("{:#?}", mesh);
+```
+
+## Writing
+
+A [`Mesh`](https://docs.rs/off-rs/latest/off_rs/geometry/mesh/struct.Mesh.html) can be written back to the `.off` format:
+
+```rust
+use off_rs::writer::options::Options;
+use off_rs::parser::color_format::ColorFormat;
+
+let mesh = off_rs::from_path("cube.off", Default::default())?;
+
+// as a string
+let off_string = off_rs::to_off_string(&mesh, Options::default())?;
+
+// to a file (or any `std::io::Write` using `off_rs::write`)
+off_rs::to_path(&mesh, "copy.off", Options {
+    color_format: ColorFormat::RGBInteger,
+})?;
+```
+
+Colors are written in the configured color format. Formats without an alpha channel drop the alpha value, and integer formats round to the nearest `u8`.
+Meshes that can not be parsed again (faces with less than three vertices or with vertex indices that do not exist) are rejected with an error.
+
+## OFF format example
+
 Sample `.off` file:
 
 ```off
@@ -39,82 +91,6 @@ OFF
 ```
 
 This [cube.off](examples/cube.off) file is parsed using `off-rs` [in this example](examples/cube.rs).
-
-## Usage
-
-```rust
-let off_string = r#"
-OFF
-3 1
-1.0 0.0 0.0
-0.0 1.0 0.0
-0.0 0.0 1.0
-3  0 1 2  255 0 0 # red
-"#;
-
-let mesh = off_rs::parse(
-    off_string,
-    Default::default() // optional ParserOptions
-);
-
-println!("{:#?}", mesh);
-```
-
-Will return a structure like this:
-
-```jsonc
-Mesh {
-    vertices: [
-        Vertex {
-            position: Position {
-                x: 1.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            color: None,
-        },
-        ...
-    faces: [
-        Face {
-            vertices: [
-                0,
-                1,
-                2,
-                3,
-            ],
-            color: Some(
-                Color {
-                    red: 1.0,
-                    green: 0.0,
-                    blue: 0.0,
-                    alpha: 1.0,
-                },
-            ),
-        },
-        ...
-```
-
-## Writing
-
-A [`Mesh`](https://docs.rs/off-rs/latest/off_rs/geometry/mesh/struct.Mesh.html) can be written back to the `.off` format:
-
-```rust
-use off_rs::writer::options::Options;
-use off_rs::parser::color_format::ColorFormat;
-
-let mesh = off_rs::from_path("cube.off", Default::default())?;
-
-// as a string
-let off_string = off_rs::to_off_string(&mesh, Options::default())?;
-
-// to a file (or any `std::io::Write` using `off_rs::write`)
-off_rs::to_path(&mesh, "copy.off", Options {
-    color_format: ColorFormat::RGBInteger,
-})?;
-```
-
-Colors are written in the configured color format. Formats without an alpha channel drop the alpha value, and integer formats round to the nearest `u8`.
-Meshes that can not be parsed again (faces with less than three vertices or with vertex indices that do not exist) are rejected with an error.
 
 ## Releases
 
